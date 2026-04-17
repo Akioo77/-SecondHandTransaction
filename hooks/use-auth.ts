@@ -18,7 +18,9 @@ export function useAuth() {
 
   const checkAuth = async () => {
     try {
+      console.log("[Auth] Starting auth check, calling /api/users/profile...")
       const response = await authApi.getProfile()
+      console.log("[Auth] Response:", response)
       if (response.data) {
         setUser(response.data as User)
       }

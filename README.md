@@ -1,213 +1,185 @@
-# 二手交易平台 (Second Hand Transaction Platform)
+# 华为网络自动化作业 - 代码说明
 
-一个基于 Spring Boot + Next.js 的全栈二手商品交易平台，支持商品发布、浏览、交易、评价等完整功能。
-
-## 📋 项目简介
-
-本项目是一个现代化的二手交易平台，提供用户注册登录、商品管理、订单处理、收藏功能等完整的电商交易流程。
-
-## 👥 开发者信息
-
-- 姓名：莊英琪
-- 学号：202335450091
-
-### 主要功能
-
-- 👤 用户认证：注册、登录、个人信息管理
-- 📦 商品管理：发布、编辑、删除商品
-- 🛒 交易功能：下单、订单管理、交易状态跟踪
-- ⭐ 收藏功能：收藏感兴趣的商品
-- 💬 评价系统：买家卖家互评
-- 📊 销售统计：卖家销售数据汇总
-- 🔍 分类浏览：按商品分类查看
-
-## 🛠️ 技术栈
-
-### 后端 (SecondHandTransaction)
-
-- **框架**: Spring Boot 4.0.1
-- **语言**: Java 21
-- **数据库**: MySQL / MariaDB
-- **ORM**: Spring Data JPA
-- **安全**: Spring Security
-- **构建工具**: Maven
-
-### 前端 (SecondHandTransaction-Frontend)
-
-- **框架**: Next.js 16.0.10
-- **语言**: TypeScript 5
-- **UI 库**: React 19.2.0
-- **样式**: Tailwind CSS 4.1.9
-- **组件库**: Radix UI
-- **表单**: React Hook Form + Zod
-- **图表**: Recharts
-
-## 📁 项目结构
-
-```
-second-hand-transaction/
-├── SecondHandTransaction/              # 后端项目
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/org/zyq/transaction/
-│   │   │   │   ├── common/            # 公共模块
-│   │   │   │   ├── config/            # 配置类
-│   │   │   │   ├── transaction/       # 交易模块
-│   │   │   │   │   ├── controller/    # 控制器
-│   │   │   │   │   ├── service/       # 业务逻辑
-│   │   │   │   │   ├── repository/    # 数据访问
-│   │   │   │   │   ├── entity/        # 实体类
-│   │   │   │   │   ├── dto/           # 数据传输对象
-│   │   │   │   │   └── vo/            # 视图对象
-│   │   │   │   └── user/              # 用户模块
-│   │   │   └── resources/
-│   │   │       └── application.properties
-│   │   └── test/
-│   ├── pom.xml
-│   └── SecondHandPlatform.sql         # 数据库脚本
-│
-└── SecondHandTransaction-Frontend/     # 前端项目
-    ├── app/                            # Next.js 页面
-    │   ├── categories/                 # 分类页面
-    │   ├── favorites/                  # 收藏页面
-    │   ├── login/                      # 登录页面
-    │   ├── register/                   # 注册页面
-    │   ├── products/                   # 商品页面
-    │   ├── orders/                     # 订单页面
-    │   ├── my-products/                # 我的商品
-    │   ├── publish/                    # 发布商品
-    │   ├── profile/                    # 个人中心
-    │   └── sales-summary/              # 销售统计
-    ├── components/                     # 组件
-    │   ├── ui/                         # UI 组件
-    │   ├── header.tsx                  # 头部组件
-    │   ├── footer.tsx                  # 底部组件
-    │   └── product-card.tsx            # 商品卡片
-    ├── lib/                            # 工具库
-    ├── hooks/                          # 自定义 Hooks
-    └── package.json
-```
-
-## 🚀 快速开始
-
-### 环境要求
-
-- Java 21+
-- Node.js 18+
-- MySQL 8.0+ / MariaDB 10.5+
-- Maven 3.8+
-
-### 后端启动
-
-1. 导入数据库
-```bash
-mysql -u root -p < SecondHandTransaction/SecondHandPlatform.sql
-```
-
-2. 配置数据库连接
-编辑 `SecondHandTransaction/src/main/resources/application.properties`
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/second_hand_platform
-spring.datasource.username=your_username
-spring.datasource.password=your_password
-```
-
-3. 启动后端服务
-```bash
-cd SecondHandTransaction
-mvn spring-boot:run
-```
-
-后端服务将运行在 `http://localhost:8080`
-
-### 前端启动
-
-1. 安装依赖
-```bash
-cd SecondHandTransaction-Frontend
-npm install
-```
-
-2. 启动开发服务器
-```bash
-npm run dev
-```
-
-前端服务将运行在 `http://localhost:3000`
-
-## 📡 API 接口
-
-### 用户模块
-- `POST /api/auth/register` - 用户注册
-- `POST /api/auth/login` - 用户登录
-- `GET /api/users/profile` - 获取用户信息
-- `PUT /api/users/profile` - 更新用户信息
-
-### 商品模块
-- `GET /api/products` - 获取商品列表
-- `GET /api/products/{id}` - 获取商品详情
-- `POST /api/products` - 发布商品
-- `PUT /api/products/{id}` - 更新商品
-- `DELETE /api/products/{id}` - 删除商品
-
-### 订单模块
-- `POST /api/orders` - 创建订单
-- `GET /api/orders` - 获取订单列表
-- `PUT /api/orders/{id}/status` - 更新订单状态
-
-### 分类模块
-- `GET /api/categories` - 获取分类列表
-
-### 收藏模块
-- `POST /api/favorites` - 添加收藏
-- `DELETE /api/favorites/{id}` - 取消收藏
-- `GET /api/favorites` - 获取收藏列表
-
-## 🔒 安全特性
-
-- Spring Security 身份认证
-- BCrypt 密码加密
-- CORS 跨域配置
-- SQL 注入防护
-
-## 📝 开发说明
-
-### 后端开发
-- 遵循 RESTful API 设计规范
-- 使用 DTO 模式进行数据传输
-- 统一异常处理
-- 分层架构：Controller -> Service -> Repository
-
-### 前端开发
-- 使用 TypeScript 进行类型安全开发
-- 组件化开发，复用性强
-- 响应式设计，支持移动端
-- 使用 React Hook Form 进行表单验证
-
-## 📦 构建部署
-
-### 后端打包
-```bash
-cd SecondHandTransaction
-mvn clean package
-java -jar target/SecondHandTransaction-0.0.1-SNAPSHOT.jar
-```
-
-### 前端打包
-```bash
-cd SecondHandTransaction-Frontend
-npm run build
-npm start
-```
-
-## 📄 许可证
-
-本项目仅供学习交流使用。
-
-## 📮 联系方式
-
-如有问题或建议，欢迎提交 Issue 或 Pull Request。
+> 本次作业包含 **题1 (SSH/Paramiko)** 和 **题2 (NETCONF)** 两部分完整代码
 
 ---
 
-⭐ 如果这个项目对你有帮助，欢迎 Star！
+## 📁 文件说明
+
+| 文件 | 对应题目 | 协议 |
+|------|---------|------|
+| `task1_paramiko_ospfv3.py` | 题1 | SSH + Paramiko |
+| `task2_netconf_ospfv3.py` | 题2 | NETCONF + ncclient |
+| `README.md` | 使用说明 | - |
+
+---
+
+## 🖥️ eNSP 拓扑图参考
+
+```
+        R1
+   2001:db8:1::1/64     2001:db8:2::1/64
+   Gi0/0/0              Gi0/0/1
+        |                    |
+        | 2001:db8:1::2/64   | 2001:db8:2::2/64
+        |                    |
+   Gi0/0/0              Gi0/0/0
+        R2                  R3
+   2001:db8:3::1/64
+   Gi0/0/1
+        |
+        | 2001:db8:3::2/64
+        |
+   Gi0/0/1
+```
+
+**eNSP 拓扑建议:**
+- 3台 AR1220 路由器
+- 每台路由器之间用 GE 线缆直连
+- 每台路由器的 Gi0/0/0 和 Gi0/0/1 分别连接其他两台
+
+---
+
+## 🐍 环境准备 (Windows)
+
+### 1. 安装 Python
+- 下载 Python 3.8+: https://www.python.org/downloads/
+- 安装时勾选 **Add Python to PATH**
+
+### 2. 安装依赖库
+
+打开 **命令提示符 (cmd)** 或 **PowerShell**，运行:
+
+```bash
+# 题1 依赖
+pip install paramiko
+
+# 题2 依赖
+pip install ncclient
+
+# 验证安装
+python -c "import paramiko; print('paramiko OK')"
+python -c "import ncclient; print('ncclient OK')"
+```
+
+如果网络慢，用阿里云镜像:
+```bash
+pip install paramiko ncclient -i https://mirrors.aliyun.com/pypi/simple/
+```
+
+### 3. 配置 eNSP
+
+1. 打开 eNSP，新建拓扑
+2. 拖入 3 台 AR1220 路由器
+3. 用 GE 线缆连接:
+   - R1 Gi0/0/0 ↔ R2 Gi0/0/0
+   - R1 Gi0/0/1 ↔ R3 Gi0/0/0
+   - R2 Gi0/0/1 ↔ R3 Gi0/0/1
+4. 配置每台路由器的接口 IP (在 eNSP 里手动配置 或用代码自动配置)
+5. 启动所有设备
+
+### 4. 获取路由器 IP
+
+在 eNSP 里，每台路由器的 **"控制面板"** 可以查看/设置 IP。
+默认管理接口通常是:
+- R1: 192.168.1.1
+- R2: 192.168.1.2
+- R3: 192.168.1.3
+
+> ⚠️ 如果路由器没有 IP，需要先在 eNSP 里用 `interface X` + `ip address X.X.X.X 24` 手动配置一个管理 IP
+
+---
+
+## 🚀 运行代码
+
+### 题1: SSH/Paramiko
+
+```bash
+python task1_paramiko_ospfv3.py
+```
+
+### 题2: NETCONF/ncclient
+
+```bash
+python task2_netconf_ospfv3.py
+```
+
+---
+
+## 🔧 代码中的配置修改
+
+在文件顶部的 `配置区` 修改路由器参数:
+
+```python
+# 题1 - 修改路由器 IP/端口/账号
+ROUTERS = [
+    {
+        "host": "192.168.1.1",   # ← 修改为你的路由器 IP
+        "port": 22,
+        "username": "admin",
+        "password": "admin123",
+        "name": "R1",
+    },
+    ...
+]
+
+# 题2 - NETCONF 端口是 830 (不是 22!)
+ROUTERS = [
+    {
+        "host": "192.168.1.1",
+        "port": 830,   # ← NETCONF over SSH 端口
+        ...
+    }
+]
+```
+
+---
+
+## 📸 截图要求
+
+作业要求提交以下截图:
+
+1. **eNSP 拓扑图** - 设备运行状态
+2. **接口状态截图** - `display ip interface brief` 或 NETCONF 查询结果
+3. **OSPFv3 邻居截图** - `display ospfv3 peer`
+4. **IPv6 路由表截图** - `display ipv6 routing-table`
+5. **Ping 测试截图** - 全网互通的连通性测试
+
+---
+
+## ⚠️ 常见问题
+
+### Q: 连接失败 "Authentication failed"
+**A:** 检查代码里的用户名密码是否和 eNSP 路由器配置一致
+
+### Q: 连接失败 "Connection refused"
+**A:** 检查: 1) 路由器是否启动 2) IP 是否正确 3) SSH 端口是否放通
+
+### Q: NETCONF 连接不上
+**A:** 华为路由器默认可能没开启 NETCONF，确认在路由器上运行:
+```
+netconf ssh server enable
+```
+
+### Q: Paramiko 安装失败
+**A:** 用管理员权限打开 cmd:
+```
+pip install --user paramiko
+```
+
+---
+
+## 📊 SSH vs NETCONF 对比
+
+| 特性 | SSH/Paramiko | NETCONF/ncclient |
+|------|-------------|-----------------|
+| 协议端口 | 22 | 830 |
+| 数据格式 | 文本命令 | XML 结构化数据 |
+| 操作方式 | 模拟终端 | RPC 调用 |
+| 配置方式 | 命令行逐条 | 事务性批量配置 |
+| 可视化 | 不支持 | 结构化输出 |
+
+---
+
+> 💡 代码由 庄英琪 AI 助手 生成 💎
+> 有问题随时问！

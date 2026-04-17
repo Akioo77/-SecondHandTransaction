@@ -8,7 +8,9 @@ interface ApiResponse<T> {
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = `${API_BASE_URL}${endpoint}`
+    console.log(`[API] ${options?.method || "GET"} ${url}`)
+    const response = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
@@ -28,7 +30,15 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<Api
       }
     }
 
-    return { data: data as T }
+    // 自动拆掉 Result 包装（{code, message, data} → 直接返回 data）
+    // analytics 接口的 data 本身又是一个 {data:[...]} 结构，再拆一层
+    const raw = data as any
+    let unwrapped = (raw && typeof raw === "object" && "code" in raw && "data" in raw) ? raw.data : raw
+    if (unwrapped && typeof unwrapped === "object" && "data" in unwrapped && Array.isArray((unwrapped as any).data)) {
+      unwrapped = (unwrapped as any).data
+    }
+
+    return { data: unwrapped as T }
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Network error",
@@ -70,7 +80,8 @@ export const productApi = {
     return fetchApi(`/api/products${queryStr ? `?${queryStr}` : ""}`, { method: "GET" })
   },
 
-  getDetail: (id: number) => fetchApi(`/api/products/${id}`, { method: "GET" }),
+  getDetail: (id: number, viewerId?: number) =>
+    fetchApi(`/api/products/${id}${viewerId ? `?viewerId=${viewerId}` : ""}`, { method: "GET" }),
 
   publish: (data: {
     sellerId: number
@@ -161,10 +172,10 @@ export const orderApi = {
     return fetchApi(`/api/orders${queryStr ? `?${queryStr}` : ""}`, { method: "GET" })
   },
 
-  updateStatus: (id: number, status: number) =>
+  updateStatus: (id: number, status: number, userId: number) =>
     fetchApi(`/api/orders/${id}/status`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, userId }),
     }),
 
   updateShipping: (
@@ -220,4 +231,169 @@ export const favoriteApi = {
       method: "POST",
       body: JSON.stringify({ id: userId }),
     }),
+}
+
+// Analytics API
+export const analyticsApi = {
+  // 用户画像（地域 + 购买力 + 品类偏好）
+  getUserPortrait: () =>
+    fetchApi<{
+      totalUsers: number; activeUsers: number;
+      regionDistribution: Record<string, number>;
+      purchasePowerDistribution: Record<string, number>;
+      categoryPreference: Record<string, number>;
+    }>("/api/analytics/user-portrait", { method: "GET" }),
+
+  // 销售排行榜
+  getSalesRanking: (limit = 10) =>
+    fetchApi<{
+      productId: number; productTitle: string; categoryId: number;
+      categoryName: string; price: number; salesCount: number;
+      salesAmount: number; viewCount: number; favoriteCount: number;
+    }[]>(`/api/analytics/sales-ranking?limit=${limit}`, { method: "GET" }),
+
+  // 销售趋势（日）
+  getDailyTrend: (days = 30) =>
+    fetchApi<{
+      date: string; orderCount: number; soldQuantity: number;
+      salesAmount: number; viewCount: number;
+    }[]>(`/api/analytics/sales-trend/daily?days=${days}`, { method: "GET" }),
+
+  // 销售趋势（月）
+  getMonthlyTrend: (months = 6) =>
+    fetchApi<{
+      month: string; orderCount: number; soldQuantity: number; salesAmount: number;
+    }[]>(`/api/analytics/sales-trend/monthly?months=${months}`, { method: "GET" }),
+
+  // 趋势研判（环比涨跌 + 运营建议）
+  getTrendAnalysis: (days = 7) =>
+    fetchApi<{
+      currentSales: number; previousSales: number; salesChangePct: number;
+      currentSoldQty: number; previousSoldQty: number; qtyChangePct: number;
+      trend: string; advice: string;
+    }>(`/api/analytics/trend-analysis?days=${days}`, { method: "GET" }),
+
+  // 品类分析
+  getCategoryAnalysis: () =>
+    fetchApi<{
+      categoryId: number; categoryName: string; productCount: number;
+      soldQuantity: number; totalSalesAmount: number; avgPrice: number;
+    }[]>("/api/analytics/category-analysis", { method: "GET" }),
+
+  // 供需监控
+  getSupplyDemand: () =>
+    fetchApi<{
+      categoryId: number; categoryName: string;
+      supply: number; demand: number; status: string;
+    }[]>("/api/analytics/supply-demand", { method: "GET" }),
+
+  // 商品浏览趋势（单品分析）
+  getProductTrend: (productId: number, days = 14) =>
+    fetchApi<{
+      dailyViews: Record<string, number>;
+      totalViews: number; uniqueUsers: number; peakDay: string;
+    }>(`/api/analytics/product-trend?productId=${productId}&days=${days}`, { method: "GET" }),
+
+  // 看了又买（协同过滤推荐）
+  getAlsoBought: (productId: number, limit = 6) =>
+    fetchApi<{
+      productId: number; title: string; price: number;
+      salesCount: number; viewCount: number; reason: string;
+    }[]>(`/api/analytics/also-bought?productId=${productId}&limit=${limit}`, { method: "GET" }),
+
+  // 热销推荐（首页）
+  getRecommendations: (limit = 10) =>
+    fetchApi<{
+      productId: number; title: string; price: number;
+      salesCount: number; viewCount: number; reason: string;
+    }[]>(`/api/analytics/recommendations?limit=${limit}`, { method: "GET" }),
+
+  // 个性化首页推荐（基于用户品类偏好）
+  getPersonalized: (userId: number, limit = 10) =>
+    fetchApi<{
+      productId: number; title: string; price: number;
+      salesCount: number; viewCount: number; reason: string;
+    }[]>(`/api/analytics/personalized?userId=${userId}&limit=${limit}`, { method: "GET" }),
+
+  // 销售异常摘要（仪表盘用）
+  getAnomalySummary: () =>
+    fetchApi<{
+      totalAnomalies: number; dangerCount: number; warningCount: number;
+      level: string; anomalies: AnomalyItem[];
+    }>(`/api/analytics/anomaly-summary`, { method: "GET" }),
+
+  // 销售趋势预测
+  getForecast: (historyDays = 30, forecastDays = 7) =>
+    fetchApi<ForecastData>(`/api/analytics/forecast?historyDays=${historyDays}&forecastDays=${forecastDays}`, { method: "GET" }),
+}
+
+type ForecastData = {
+  trend: string; slope: number; rSquared: number; confidence: string;
+  forecast: { date: string; predictedOrders: number; predictedRevenue: number; lowerBound: number; upperBound: number }[];
+  summary: Record<string, any>;
+}
+
+type AnomalyItem = {
+  type: string; level: string; description: string; detail: string; detectedAt: string;
+}
+
+// Admin API
+export const adminApi = {
+  getStats: () => fetchApi<{
+    totalUsers: number; totalProducts: number; totalOrders: number;
+    totalRevenue: number; pendingOrders: number; topProducts: any[];
+  }>("/api/admin/stats", { method: "GET" }),
+
+  getUsers: () => fetchApi<any[]>("/api/admin/users", { method: "GET" }),
+
+  updateUserStatus: (id: number, enabled: boolean) =>
+    fetchApi(`/api/admin/users/${id}/status?enabled=${enabled}`, { method: "PUT" }),
+
+  getProducts: () => fetchApi<any[]>("/api/admin/products", { method: "GET" }),
+
+  updateProduct: (id: number, updates: { price?: number; quantity?: number; categoryId?: number }) =>
+    fetchApi(`/api/admin/products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    }),
+
+  getCategories: () => fetchApi<any[]>("/api/admin/categories", { method: "GET" }),
+
+  addCategory: (name: string) =>
+    fetchApi("/api/admin/categories", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+
+  deleteCategory: (id: number) =>
+    fetchApi(`/api/admin/categories/${id}`, { method: "DELETE" }),
+
+  getOrders: () => fetchApi<any[]>("/api/admin/orders", { method: "GET" }),
+
+  getSalesTrend: () => fetchApi<{ daily: any[] }>("/api/admin/sales-trend", { method: "GET" }),
+
+  getOperationLogs: (action?: string, targetType?: string) => {
+    let url = "/api/admin/operation-logs"
+    const params = []
+    if (action) params.push(`action=${action}`)
+    if (targetType) params.push(`targetType=${targetType}`)
+    if (params.length > 0) url += "?" + params.join("&")
+    return fetchApi<OperationLogEntry[]>(url, { method: "GET" })
+  },
+
+  getUserProfile: (userId: number) =>
+    fetchApi<UserProfileData>(`/api/admin/users/${userId}/profile`, { method: "GET" }),
+}
+
+type UserProfileData = {
+  userId: number; username: string; region: string; lastLoginIp: string; createdAt: string;
+  purchasePower: { totalSpend: number; orderCount: number; completedOrders: number; avgOrderAmount: number; level: string };
+  categoryPreferences: { categoryName: string; categoryId: number; viewCount: number; buyCount: number; spend: number; preferenceLevel: string }[];
+  behaviorStats: { totalViews: number; totalFavorites: number; publishCount: number; buyCount: number; sellCount: number; activeDays: number };
+}
+
+type OperationLogEntry = {
+  id: number; operatorAccount: string; operatorRole: string; action: string;
+  description: string; targetType: string; targetId: number;
+  beforeState: string; afterState: string; ipAddress: string; createdAt: string;
 }

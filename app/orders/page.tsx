@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { orderApi } from "@/lib/api"
+import { orderApi, productApi } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
 import {
   Package,
@@ -35,6 +35,12 @@ interface Order {
   receiverName?: string
   receiverPhone?: string
   receiverAddress?: string
+  productInfo?: {
+    title: string
+    price: number
+    images?: string
+    categoryId?: number
+  }
 }
 
 interface SalesSummary {
@@ -73,19 +79,38 @@ export default function OrdersPage() {
   }, [user])
 
   const loadOrders = async () => {
-    if (!user) return
+    if (!user) { router.push("/login"); return }
     setLoading(true)
     try {
       const [buyerRes, sellerRes] = await Promise.all([
         orderApi.getList({ buyerId: user.id }),
         orderApi.getSellerShipping(user.id),
       ])
-      if (buyerRes.data) {
-        setBuyerOrders(buyerRes.data as Order[])
+      const buyerOrders: Order[] = (buyerRes.data || []) as Order[]
+      const sellerOrders: Order[] = (sellerRes.data || []) as Order[]
+
+      // 收集所有涉及的商品 ID
+      const allProductIds = [...new Set([...buyerOrders, ...sellerOrders].map((o) => o.productId))]
+
+      // 批量获取商品详情
+      const productMap: Record<number, { title: string; price: number; images?: string; categoryId?: number }> = {}
+      if (allProductIds.length > 0) {
+        const productRes = await productApi.getList()
+        if (productRes.data) {
+          for (const p of productRes.data as any[]) {
+            if (allProductIds.includes(p.id)) {
+              productMap[p.id] = { title: p.title, price: p.price, images: p.images, categoryId: p.categoryId }
+            }
+          }
+        }
       }
-      if (sellerRes.data) {
-        setSellerOrders(sellerRes.data as Order[])
-      }
+
+      // 给订单附上商品信息
+      const enrich = (orders: Order[]) =>
+        orders.map((o) => ({ ...o, productInfo: productMap[o.productId] }))
+
+      setBuyerOrders(enrich(buyerOrders))
+      setSellerOrders(enrich(sellerOrders))
     } catch (error) {
       console.error("Failed to load orders:", error)
     } finally {
@@ -94,7 +119,7 @@ export default function OrdersPage() {
   }
 
   const loadSalesSummary = async () => {
-    if (!user) return
+    if (!user) { router.push("/login"); return }
     try {
       const response = await orderApi.getSalesSummary(user.id)
       if (response.data) {
@@ -106,8 +131,9 @@ export default function OrdersPage() {
   }
 
   const handleUpdateStatus = async (orderId: number, status: number) => {
+    if (!user) { router.push("/login"); return }
     try {
-      const response = await orderApi.updateStatus(orderId, status)
+      const response = await orderApi.updateStatus(orderId, status, user.id)
       if (response.error) {
         alert(`更新订单状态失败: ${response.error}`)
         return
@@ -171,16 +197,27 @@ export default function OrdersPage() {
       <CardContent className="p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex gap-4">
-            <div className="h-20 w-20 overflow-hidden rounded-lg bg-muted">
-              <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                <Package className="h-8 w-8" />
-              </div>
+            {/* 商品图片 */}
+            <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+              {order.productInfo?.images ? (
+                <img src={order.productInfo.images.split(",")[0]} alt={order.productInfo.title} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                  <Package className="h-8 w-8" />
+                </div>
+              )}
             </div>
             <div className="flex-1">
-              <h3 className="mb-1 font-semibold">订单号: {order.orderNo}</h3>
+              {/* 商品名称 */}
+              <h3 className="mb-1 font-semibold line-clamp-1">
+                {order.productInfo?.title ?? `商品 #${order.productId}`}
+              </h3>
               <p className="mb-2 text-sm text-muted-foreground">
-                数量: {order.quantity} | 总价: ¥{order.totalPrice.toFixed(2)}
+                单价: ¥{order.productInfo?.price?.toFixed(2) ?? "—"} | 数量: {order.quantity} | 总价: ¥{order.totalPrice.toFixed(2)}
               </p>
+              <div className="mb-2 text-xs text-muted-foreground">
+                订单号: {order.orderNo}
+              </div>
               <div className="flex items-center gap-2">
                 {getStatusBadge(order.status)}
                 <span className="text-xs text-muted-foreground">

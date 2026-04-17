@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { productApi, orderApi, favoriteApi } from "@/lib/api"
+import { productApi, orderApi, favoriteApi, analyticsApi } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
 import { getImageSrc } from "@/lib/utils"
 
@@ -34,7 +34,7 @@ interface Product {
 export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [quantity, setQuantity] = useState(1)
@@ -48,12 +48,44 @@ export default function ProductDetailPage() {
     receiverAddress: "",
   })
   const [pendingOrderId, setPendingOrderId] = useState<number | null>(null)
+  const [alsoBought, setAlsoBought] = useState<any[]>([])
+
+  // ---------- 停留时长采集 ----------
+  useEffect(() => {
+    if (!user || !product) return
+    const startTime = Date.now()
+    const productId = product.id
+    const userId = user.id
+
+    const sendDuration = () => {
+      const duration = Math.round((Date.now() - startTime) / 1000)
+      // sendBeacon 保证页面关闭时也能发送
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'}/api/products/${productId}/view?userId=${userId}&duration=${duration}`
+        )
+      }
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") sendDuration()
+    }
+
+    window.addEventListener("visibilitychange", onVisibilityChange)
+    window.addEventListener("pagehide", sendDuration)
+
+    return () => {
+      window.removeEventListener("visibilitychange", onVisibilityChange)
+      window.removeEventListener("pagehide", sendDuration)
+      sendDuration()
+    }
+  }, [user, product])
 
   useEffect(() => {
-    if (params.id) {
+    if (params.id && !authLoading) {
       loadProductDetail()
     }
-  }, [params.id])
+  }, [params.id, authLoading])
 
   useEffect(() => {
     if (user && product) {
@@ -61,9 +93,17 @@ export default function ProductDetailPage() {
     }
   }, [user, product])
 
+  // 看了又买推荐
+  useEffect(() => {
+    if (!product) return
+    analyticsApi.getAlsoBought(product.id, user?.id, 6)
+      .then(r => { if (r.data) setAlsoBought(r.data) })
+      .catch(() => {})
+  }, [product, user])
+
   const loadProductDetail = async () => {
     try {
-      const response = await productApi.getDetail(Number(params.id))
+      const response = await productApi.getDetail(Number(params.id), user?.id)
       if (response.data) {
         setProduct(response.data as Product)
       }
@@ -250,10 +290,10 @@ export default function ProductDetailPage() {
                 size="lg"
                 className="flex-1"
                 onClick={handlePurchase}
-                disabled={product.quantity === 0 || purchasing}
+                disabled={product.quantity === 0 || purchasing || user.id === product.sellerId}
               >
                 <ShoppingCart className="mr-2 h-5 w-5" />
-                {purchasing ? "下单中..." : "立即购买"}
+                {user.id === product.sellerId ? "不能购买自己发布的商品" : purchasing ? "下单中..." : "立即购买"}
               </Button>
               <Button size="lg" variant={isFavorited ? "default" : "outline"} onClick={handleToggleFavorite}>
                 <Heart className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
@@ -263,6 +303,27 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* 看了又买 */}
+      {alsoBought.length > 0 && (
+        <div className="mt-12">
+          <h2 className="mb-4 text-xl font-bold">看了又买</h2>
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {alsoBought.map((item) => (
+              <div key={item.productId}
+                className="cursor-pointer rounded border p-3 hover:shadow"
+                onClick={() => router.push(`/products/${item.productId}`)}>
+                <div className="aspect-square w-full overflow-hidden rounded bg-muted mb-2">
+                  <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">暂无图片</div>
+                </div>
+                <p className="truncate text-sm font-medium">{item.title}</p>
+                <p className="mt-1 text-green-600 font-bold text-sm">¥{Number(item.price).toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-1">已售 {item.salesCount}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Dialog open={showShippingDialog} onOpenChange={setShowShippingDialog}>
         <DialogContent>

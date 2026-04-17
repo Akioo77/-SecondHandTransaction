@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Search, ShoppingBag, Heart, User } from "lucide-react"
+import { Search, ShoppingBag, Heart, User, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -61,6 +61,20 @@ export function Header() {
             >
               商品
             </Link>
+            <Link
+              href="/analytics"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              数据分析
+            </Link>
+            <Link
+              href="/admin"
+              className="text-sm font-medium text-slate-400 transition-colors hover:text-slate-700 flex items-center gap-1"
+              title="管理后台"
+            >
+              <Shield size={14} />
+              管理
+            </Link>
           </nav>
         </div>
 
@@ -103,6 +117,9 @@ export function Header() {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/orders">我的订单</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/analytics">数据分析</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>退出登录</DropdownMenuItem>
