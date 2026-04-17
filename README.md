@@ -1,185 +1,156 @@
-# 华为网络自动化作业 - 代码说明
+# 闲趣二手平台 - 前端（SecondHandFrontend）
 
-> 本次作业包含 **题1 (SSH/Paramiko)** 和 **题2 (NETCONF)** 两部分完整代码
+> Next.js 16 前端项目，为「闲趣二手平台」提供用户界面、数据分析看板和管理后台。
 
----
-
-## 📁 文件说明
-
-| 文件 | 对应题目 | 协议 |
-|------|---------|------|
-| `task1_paramiko_ospfv3.py` | 题1 | SSH + Paramiko |
-| `task2_netconf_ospfv3.py` | 题2 | NETCONF + ncclient |
-| `README.md` | 使用说明 | - |
+**配合后端使用**：请先启动 [SecondHandProject](../SecondHandProject/)（端口 8080）
 
 ---
 
-## 🖥️ eNSP 拓扑图参考
+## 🛠️ 技术栈
+
+| 技术 | 说明 |
+|------|------|
+| Next.js 16.0.10 | React 全栈框架 |
+| TypeScript 5 | 类型安全 |
+| Tailwind CSS 4 | 原子化样式 |
+| shadcn/ui + Radix UI | 组件库 |
+| Recharts | 图表（折线/柱状/饼图）|
+| React Hook Form + Zod | 表单验证 |
+
+---
+
+## 📁 页面结构
 
 ```
-        R1
-   2001:db8:1::1/64     2001:db8:2::1/64
-   Gi0/0/0              Gi0/0/1
-        |                    |
-        | 2001:db8:1::2/64   | 2001:db8:2::2/64
-        |                    |
-   Gi0/0/0              Gi0/0/0
-        R2                  R3
-   2001:db8:3::1/64
-   Gi0/0/1
-        |
-        | 2001:db8:3::2/64
-        |
-   Gi0/0/1
+app/
+├── page.tsx                     # 首页（商品展示 + 个性化推荐）
+├── login/page.tsx              # 登录
+├── register/page.tsx           # 注册
+├── products/
+│   ├── page.tsx                 # 商品列表（分类/搜索筛选）
+│   └── [id]/page.tsx           # 商品详情（含看了又买）
+├── orders/page.tsx             # 订单管理（买到的/卖出的）
+├── favorites/page.tsx          # 收藏列表
+├── my-products/page.tsx       # 我的发布商品
+├── publish/page.tsx            # 发布商品
+├── profile/page.tsx            # 个人中心（修改密码）
+├── admin/
+│   ├── page.tsx                # 仪表盘（数据概览）
+│   ├── login/page.tsx          # Admin 登录
+│   ├── users/page.tsx          # 用户管理
+│   ├── products/page.tsx       # 商品管理（价格/库存修改）
+│   ├── categories/page.tsx     # 分类管理
+│   ├── orders/page.tsx         # 订单管理
+│   ├── analytics/page.tsx       # 销售预测分析
+│   └── operation-logs/page.tsx  # 操作日志
+└── analytics/
+    ├── page.tsx                # 数据概览（统计卡片 + 销售趋势）
+    ├── sales-trend/page.tsx    # 销售趋势（切换日/周/月）
+    ├── product-ranking/page.tsx # 销售排行榜
+    └── recommendations/page.tsx # 个性化推荐
 ```
-
-**eNSP 拓扑建议:**
-- 3台 AR1220 路由器
-- 每台路由器之间用 GE 线缆直连
-- 每台路由器的 Gi0/0/0 和 Gi0/0/1 分别连接其他两台
 
 ---
 
-## 🐍 环境准备 (Windows)
-
-### 1. 安装 Python
-- 下载 Python 3.8+: https://www.python.org/downloads/
-- 安装时勾选 **Add Python to PATH**
-
-### 2. 安装依赖库
-
-打开 **命令提示符 (cmd)** 或 **PowerShell**，运行:
+## 🚀 快速启动
 
 ```bash
-# 题1 依赖
-pip install paramiko
-
-# 题2 依赖
-pip install ncclient
-
-# 验证安装
-python -c "import paramiko; print('paramiko OK')"
-python -c "import ncclient; print('ncclient OK')"
+npm install
+npm run dev
 ```
 
-如果网络慢，用阿里云镜像:
+访问 http://localhost:3000
+
+> ⚠️ 需要后端服务已启动（http://localhost:8080）
+
+---
+
+## 📡 API 集成层
+
+所有后端 API 调用统一在 `lib/api.ts` 中管理：
+
+```typescript
+// 认证
+authApi.login(username, password)
+authApi.register(username, password)
+
+// 商品
+productApi.getProducts({ categoryId, keyword })
+productApi.getProduct(id)
+
+// 订单
+orderApi.getOrders({ buyerId, sellerId, status })
+orderApi.updateStatus(orderId, status, userId)
+
+// 数据分析
+analyticsApi.getSalesRanking(limit)
+analyticsApi.getDailyTrend(days)
+analyticsApi.getForecast(historyDays, forecastDays)
+
+// 管理后台
+adminApi.getStats()
+adminApi.getUsers()
+adminApi.updateProduct(id, { price, quantity })
+```
+
+---
+
+## 🔐 鉴权机制
+
+- 用户登录成功后，后端设置 `Set-Cookie: ID=<userId>`
+- `hooks/use-auth.ts` 读取 Cookie 判断登录状态
+- `middleware.ts` 保护 `/admin/*` 和 `/analytics` 页面，未登录跳转登录页
+- Admin 后台使用独立 Cookie（`admin_session`）
+
+---
+
+## 🧩 组件说明
+
+| 目录 | 内容 |
+|------|------|
+| `components/ui/` | shadcn/ui 组件（Card/Select/Switch/Table 等）|
+| `components/header.tsx` | 全局顶部导航 |
+| `lib/api.ts` | API 调用封装 |
+| `lib/utils.ts` | 工具函数（图片处理/时间格式化）|
+| `hooks/use-auth.ts` | 登录状态管理 |
+
+---
+
+## 📊 数据分析页面说明
+
+### /analytics（数据概览）
+- 4 张统计卡片：累计销售额/订单数/浏览量/月销冠军
+- 销售趋势折线图（近14天）
+- 品类偏好饼图 + 购买力分布
+- 分类供需状态展示
+
+### /analytics/sales-trend（销售趋势）
+- 日/周/月粒度切换
+- 销售额 + 订单数双轴折线图
+- 查看历史任意时间段
+
+### /analytics/product-ranking（排行榜）
+- 按销量/销售额排序
+- 商品分类标签 + 收藏数展示
+
+### /analytics/recommendations（个性化推荐）
+- 为当前用户推荐商品
+- 推荐理由标注（猜你喜欢 / 为你推荐 / 看了又买）
+
+### /admin/analytics（销售预测）
+- 未来7天销量/收入预测
+- 一元线性回归 + 置信区间
+- 日均订单 / 趋势判断 / 置信度显示
+
+---
+
+## 🔧 环境变量
+
 ```bash
-pip install paramiko ncclient -i https://mirrors.aliyun.com/pypi/simple/
-```
-
-### 3. 配置 eNSP
-
-1. 打开 eNSP，新建拓扑
-2. 拖入 3 台 AR1220 路由器
-3. 用 GE 线缆连接:
-   - R1 Gi0/0/0 ↔ R2 Gi0/0/0
-   - R1 Gi0/0/1 ↔ R3 Gi0/0/0
-   - R2 Gi0/0/1 ↔ R3 Gi0/0/1
-4. 配置每台路由器的接口 IP (在 eNSP 里手动配置 或用代码自动配置)
-5. 启动所有设备
-
-### 4. 获取路由器 IP
-
-在 eNSP 里，每台路由器的 **"控制面板"** 可以查看/设置 IP。
-默认管理接口通常是:
-- R1: 192.168.1.1
-- R2: 192.168.1.2
-- R3: 192.168.1.3
-
-> ⚠️ 如果路由器没有 IP，需要先在 eNSP 里用 `interface X` + `ip address X.X.X.X 24` 手动配置一个管理 IP
-
----
-
-## 🚀 运行代码
-
-### 题1: SSH/Paramiko
-
-```bash
-python task1_paramiko_ospfv3.py
-```
-
-### 题2: NETCONF/ncclient
-
-```bash
-python task2_netconf_ospfv3.py
+# .env.local（前端无需配置，后端接口地址已写死为 localhost:8080）
+NEXT_PUBLIC_API_URL=http://localhost:8080
 ```
 
 ---
 
-## 🔧 代码中的配置修改
-
-在文件顶部的 `配置区` 修改路由器参数:
-
-```python
-# 题1 - 修改路由器 IP/端口/账号
-ROUTERS = [
-    {
-        "host": "192.168.1.1",   # ← 修改为你的路由器 IP
-        "port": 22,
-        "username": "admin",
-        "password": "admin123",
-        "name": "R1",
-    },
-    ...
-]
-
-# 题2 - NETCONF 端口是 830 (不是 22!)
-ROUTERS = [
-    {
-        "host": "192.168.1.1",
-        "port": 830,   # ← NETCONF over SSH 端口
-        ...
-    }
-]
-```
-
----
-
-## 📸 截图要求
-
-作业要求提交以下截图:
-
-1. **eNSP 拓扑图** - 设备运行状态
-2. **接口状态截图** - `display ip interface brief` 或 NETCONF 查询结果
-3. **OSPFv3 邻居截图** - `display ospfv3 peer`
-4. **IPv6 路由表截图** - `display ipv6 routing-table`
-5. **Ping 测试截图** - 全网互通的连通性测试
-
----
-
-## ⚠️ 常见问题
-
-### Q: 连接失败 "Authentication failed"
-**A:** 检查代码里的用户名密码是否和 eNSP 路由器配置一致
-
-### Q: 连接失败 "Connection refused"
-**A:** 检查: 1) 路由器是否启动 2) IP 是否正确 3) SSH 端口是否放通
-
-### Q: NETCONF 连接不上
-**A:** 华为路由器默认可能没开启 NETCONF，确认在路由器上运行:
-```
-netconf ssh server enable
-```
-
-### Q: Paramiko 安装失败
-**A:** 用管理员权限打开 cmd:
-```
-pip install --user paramiko
-```
-
----
-
-## 📊 SSH vs NETCONF 对比
-
-| 特性 | SSH/Paramiko | NETCONF/ncclient |
-|------|-------------|-----------------|
-| 协议端口 | 22 | 830 |
-| 数据格式 | 文本命令 | XML 结构化数据 |
-| 操作方式 | 模拟终端 | RPC 调用 |
-| 配置方式 | 命令行逐条 | 事务性批量配置 |
-| 可视化 | 不支持 | 结构化输出 |
-
----
-
-> 💡 代码由 庄英琪 AI 助手 生成 💎
-> 有问题随时问！
+> 💎 配合 [SecondHandProject](../SecondHandProject/) 后端使用
