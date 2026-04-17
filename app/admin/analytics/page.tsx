@@ -69,7 +69,7 @@ export default function AdminAnalyticsPage() {
         <Card>
           <CardContent className="p-5">
             <p className="text-xs text-slate-500 mb-1">预测日增量</p>
-            <p className="text-xl font-bold">{forecast?.slope >= 0 ? "+" : ""}{forecast?.slope?.toFixed(2) ?? 0}</p>
+            <p className="text-xl font-bold">{(forecast?.slope ?? 0) >= 0 ? "+" : ""}{forecast?.slope?.toFixed(2) ?? "0.00"}</p>
             <p className="text-xs text-slate-400">单/天</p>
           </CardContent>
         </Card>

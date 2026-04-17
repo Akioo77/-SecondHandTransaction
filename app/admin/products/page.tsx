@@ -40,8 +40,8 @@ export default function ProductsPage() {
 
   const saveEdit = async (id: number) => {
     await adminApi.updateProduct(id, {
-      price: parseFloat(editPrice),
-      quantity: parseInt(editQty),
+      price: isNaN(parseFloat(editPrice)) ? undefined : parseFloat(editPrice),
+      quantity: isNaN(parseInt(editQty)) ? undefined : parseInt(editQty),
       categoryId: editCategoryId ?? undefined,
     })
     setEditingId(null)

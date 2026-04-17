@@ -23,6 +23,7 @@ export default function AnalyticsDashboard() {
   const [supplyDemand, setSupplyDemand] = useState<any[]>([])
   const [pageLoading, setPageLoading] = useState(true)
   const [totalOrders, setTotalOrders] = useState(0)
+  const [totalRevenue, setTotalRevenue] = useState(0)
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login")
@@ -59,7 +60,10 @@ export default function AnalyticsDashboard() {
       if (trendRes?.data) setTrend(trendRes.data)
       if (portraitRes?.data) setPortrait(portraitRes.data)
       if (sdRes?.data) setSupplyDemand(sdRes.data)
-      if (statsRes?.data) setTotalOrders(statsRes.data.totalOrders || 0)
+      if (statsRes?.data) {
+        setTotalOrders(statsRes.data.totalOrders || 0)
+        setTotalRevenue(statsRes.data.totalRevenue || 0)
+      }
     }).catch(console.error)
     .finally(() => setPageLoading(false))
   }
@@ -119,7 +123,7 @@ export default function AnalyticsDashboard() {
       {/* 统计卡片 */}
       <div className="grid gap-6 md:grid-cols-4 mb-8">
         {[
-          { title: "累计销售额", value: `¥${totalSales.toFixed(2)}`, sub: "近14天", icon: <TrendingUp className="h-5 w-5" />, color: "text-green-600", bg: "bg-green-50" },
+          { title: "累计销售额", value: `¥${Number(totalRevenue).toFixed(2)}`, sub: "全量统计", icon: <TrendingUp className="h-5 w-5" />, color: "text-green-600", bg: "bg-green-50" },
           { title: "累计订单", value: String(totalOrders), sub: "全量统计", icon: <ShoppingBag className="h-5 w-5" />, color: "text-blue-600", bg: "bg-blue-50" },
           { title: "累计浏览", value: String(totalViews), sub: "近14天", icon: <Eye className="h-5 w-5" />, color: "text-purple-600", bg: "bg-purple-50" },
           { title: "月销冠军", value: topSellerName, sub: topSellerAmount, icon: <Award className="h-5 w-5" />, color: "text-orange-600", bg: "bg-orange-50" },
