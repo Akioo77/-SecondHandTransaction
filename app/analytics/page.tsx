@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { analyticsApi } from "@/lib/api"
+import { analyticsApi, adminApi } from "@/lib/api"
 import { useAuth } from "@/hooks/use-auth"
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -22,6 +22,7 @@ export default function AnalyticsDashboard() {
   const [portrait, setPortrait] = useState<any>(null)
   const [supplyDemand, setSupplyDemand] = useState<any[]>([])
   const [pageLoading, setPageLoading] = useState(true)
+  const [totalOrders, setTotalOrders] = useState(0)
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login")
@@ -51,12 +52,14 @@ export default function AnalyticsDashboard() {
       analyticsApi.getDailyTrend(14),
       analyticsApi.getUserPortrait(),
       analyticsApi.getSupplyDemand(),
-    ]).then(([rankingRes, trendRes, portraitRes, sdRes]) => {
+      adminApi.getStats(),
+    ]).then(([rankingRes, trendRes, portraitRes, sdRes, statsRes]) => {
       console.log("[Analytics] rankingRes:", rankingRes)
       if (rankingRes?.data) setRanking(rankingRes.data)
       if (trendRes?.data) setTrend(trendRes.data)
       if (portraitRes?.data) setPortrait(portraitRes.data)
       if (sdRes?.data) setSupplyDemand(sdRes.data)
+      if (statsRes?.data) setTotalOrders(statsRes.data.totalOrders || 0)
     }).catch(console.error)
     .finally(() => setPageLoading(false))
   }
@@ -74,8 +77,9 @@ export default function AnalyticsDashboard() {
   const safeRanking = Array.isArray(ranking) ? ranking : []
   const safeSupplyDemand = Array.isArray(supplyDemand) ? supplyDemand : []
 
+  // totalOrders 从 admin stats 获取（真实全量订单数）
+  // trend 数据用于图表展示（近14天有销售活动的日期）
   const totalSales = safeTrend.reduce((s, d) => s + (d.salesAmount || 0), 0)
-  const totalOrders = safeTrend.reduce((s, d) => s + (d.orderCount || 0), 0)
   const totalViews = safeTrend.reduce((s, d) => s + (d.viewCount || 0), 0)
 
   // 月销冠军
@@ -116,7 +120,7 @@ export default function AnalyticsDashboard() {
       <div className="grid gap-6 md:grid-cols-4 mb-8">
         {[
           { title: "累计销售额", value: `¥${totalSales.toFixed(2)}`, sub: "近14天", icon: <TrendingUp className="h-5 w-5" />, color: "text-green-600", bg: "bg-green-50" },
-          { title: "累计订单", value: String(totalOrders), sub: "近14天", icon: <ShoppingBag className="h-5 w-5" />, color: "text-blue-600", bg: "bg-blue-50" },
+          { title: "累计订单", value: String(totalOrders), sub: "全量统计", icon: <ShoppingBag className="h-5 w-5" />, color: "text-blue-600", bg: "bg-blue-50" },
           { title: "累计浏览", value: String(totalViews), sub: "近14天", icon: <Eye className="h-5 w-5" />, color: "text-purple-600", bg: "bg-purple-50" },
           { title: "月销冠军", value: topSellerName, sub: topSellerAmount, icon: <Award className="h-5 w-5" />, color: "text-orange-600", bg: "bg-orange-50" },
         ].map(c => (
