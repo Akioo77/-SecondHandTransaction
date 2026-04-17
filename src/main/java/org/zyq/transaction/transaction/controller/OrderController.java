@@ -1,10 +1,13 @@
 package org.zyq.transaction.transaction.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
+import org.zyq.transaction.transaction.common.Result;
 import org.zyq.transaction.transaction.dto.OrderControllerDto;
 import org.zyq.transaction.transaction.service.OrderService;
 import org.zyq.transaction.transaction.vo.OrderVO;
 import org.zyq.transaction.transaction.vo.SalesSummaryVO;
+import org.zyq.transaction.user.entity.User;
 
 import java.util.List;
 
@@ -19,8 +22,10 @@ public class OrderController {
     }
 
     @PostMapping
-    public OrderVO create(@RequestBody OrderControllerDto.CreateRequest request) {
-        return orderService.create(request);
+    public OrderVO create(@RequestBody OrderControllerDto.CreateRequest request,
+                         HttpServletRequest httpRequest) {
+        String ip = User.getClientIp(httpRequest);
+        return orderService.create(request, ip);
     }
 
     @GetMapping("/{id}")
@@ -29,11 +34,11 @@ public class OrderController {
     }
 
     @GetMapping
-    public List<OrderVO> list(
+    public Result<List<OrderVO>> list(
             @RequestParam(required = false) Long buyerId,
             @RequestParam(required = false) Long sellerId,
             @RequestParam(required = false) Integer status) {
-        return orderService.list(buyerId, sellerId, status);
+        return Result.success(orderService.list(buyerId, sellerId, status));
     }
 
     @GetMapping("/sales-summary")
@@ -42,9 +47,9 @@ public class OrderController {
     }
 
     @GetMapping("/seller/{sellerId}/shipping")
-    public List<OrderVO> listShippingBySeller(@PathVariable Long sellerId,
+    public Result<List<OrderVO>> listShippingBySeller(@PathVariable Long sellerId,
                                               @RequestParam(required = false) Integer status) {
-        return orderService.listShippingBySeller(sellerId, status);
+        return Result.success(orderService.listShippingBySeller(sellerId, status));
     }
 
     @PatchMapping("/{id}/status")

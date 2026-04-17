@@ -8,7 +8,7 @@ public final class OrderControllerDto {
     public record CreateRequest(Long productId, Long buyerId, Integer quantity) {
     }
 
-    public record UpdateStatusRequest(Integer status) {
+    public record UpdateStatusRequest(Integer status, Long userId) {
     }
 
     public record UpdateShippingRequest(

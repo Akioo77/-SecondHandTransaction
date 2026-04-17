@@ -1,6 +1,7 @@
 package org.zyq.transaction.transaction.controller;
 
 import org.springframework.web.bind.annotation.*;
+import org.zyq.transaction.transaction.common.Result;
 import org.zyq.transaction.transaction.dto.CategoryControllerDto;
 import org.zyq.transaction.transaction.service.CategoryService;
 import org.zyq.transaction.transaction.vo.CategoeyVO;
@@ -28,8 +29,8 @@ public class CategoryController {
     }
 
     @GetMapping
-    public List<CategoeyVO> list() {
-        return categoryService.list();
+    public Result<List<CategoeyVO>> list() {
+        return Result.success(categoryService.list());
     }
 
     @PutMapping("/{id}")

@@ -14,13 +14,13 @@ CREATE TABLE users (
   password   VARCHAR(255) NOT NULL,
   is_deleted TINYINT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+);
 
 -- ===== 2) 分类（不做逻辑删除，简单）=====
 CREATE TABLE categories (
   id   BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(50) NOT NULL
-) ENGINE=InnoDB;
+);
 
 -- ===== 3) 商品（支持逻辑删除，图片 Base64 JSON）=====
 CREATE TABLE products (
@@ -41,7 +41,7 @@ CREATE TABLE products (
 
   INDEX idx_seller(seller_id, status, is_deleted, created_at),
   INDEX idx_cat(category_id, status, is_deleted, created_at)
-) ENGINE=InnoDB;
+);
 
 -- ===== 4) 订单（不做逻辑删除）=====
 CREATE TABLE orders (
@@ -65,7 +65,7 @@ CREATE TABLE orders (
   INDEX idx_buyer(buyer_id, created_at),
   INDEX idx_seller(seller_id, created_at),
   INDEX idx_product(product_id)
-) ENGINE=InnoDB;
+);
 
 -- ===== 5) 评价（不做逻辑删除）=====
 CREATE TABLE reviews (
@@ -76,7 +76,7 @@ CREATE TABLE reviews (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   FOREIGN KEY (order_id) REFERENCES orders(id)
-) ENGINE=InnoDB;
+);
 
 -- ===== 6) 聊天消息（不做逻辑删除）=====
 CREATE TABLE chat_messages (
@@ -93,7 +93,7 @@ CREATE TABLE chat_messages (
 
   INDEX idx_product_time(product_id, created_at),
   INDEX idx_pair_time(sender_id, receiver_id, created_at)
-) ENGINE=InnoDB;
+);
 
 -- ===== 7) 收藏（直接物理删除）=====
 CREATE TABLE favorites (
@@ -107,7 +107,7 @@ CREATE TABLE favorites (
   FOREIGN KEY (product_id) REFERENCES products(id),
 
   INDEX idx_product(product_id, created_at)
-) ENGINE=InnoDB;
+);
 
 -- ===== 8) 用户地域表（支持地域画像分析）=====
 CREATE TABLE user_addresses (
@@ -126,7 +126,7 @@ CREATE TABLE user_addresses (
   INDEX idx_user(user_id),
   INDEX idx_province(province),
   INDEX idx_city(city)
-) ENGINE=InnoDB;
+);
 
 -- ===== 9) 商品统计表（浏览量、销量累计，供排行榜和推荐用）=====
 CREATE TABLE product_stats (
@@ -138,7 +138,7 @@ CREATE TABLE product_stats (
   updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   FOREIGN KEY (product_id) REFERENCES products(id)
-) ENGINE=InnoDB;
+);
 
 -- ===== 10) 商品浏览记录（支持趋势分析）=====
 CREATE TABLE product_views (
@@ -152,4 +152,4 @@ CREATE TABLE product_views (
 
   INDEX idx_product_time(product_id, viewed_at),
   INDEX idx_viewed_at(viewed_at)
-) ENGINE=InnoDB;
+);

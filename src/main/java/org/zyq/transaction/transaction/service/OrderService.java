@@ -7,8 +7,10 @@ import org.zyq.transaction.transaction.dto.OrderControllerDto;
 import org.zyq.transaction.transaction.entity.Order;
 import org.zyq.transaction.transaction.entity.OrderStatus;
 import org.zyq.transaction.transaction.entity.Product;
+import org.zyq.transaction.transaction.entity.ProductStats;
 import org.zyq.transaction.transaction.repository.OrderRepository;
 import org.zyq.transaction.transaction.repository.ProductRepository;
+import org.zyq.transaction.transaction.repository.ProductStatsRepository;
 import org.zyq.transaction.transaction.vo.OrderVO;
 import org.zyq.transaction.transaction.vo.SalesSummaryVO;
 
@@ -29,19 +31,37 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final ProductStatsRepository productStatsRepository;
 
-    public OrderService(OrderRepository orderRepository, ProductRepository productRepository) {
+    public OrderService(OrderRepository orderRepository,
+                        ProductRepository productRepository,
+                        ProductStatsRepository productStatsRepository) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
+        this.productStatsRepository = productStatsRepository;
     }
+
 
     @Transactional
     public OrderVO create(OrderControllerDto.CreateRequest request) {
+        return create(request, null);
+    }
+
+    @Transactional
+    public OrderVO create(OrderControllerDto.CreateRequest request, String ip) {
         Long productId = requirePositiveId(request.productId(), "productId");
         Long buyerId = requirePositiveId(request.buyerId(), "buyerId");
         int quantity = requireQuantity(request.quantity());
 
-        Product product = requireActiveProduct(productId);
+        // 用悲观锁查询商品（防止并发超卖）
+        Product product = productRepository.findActiveByIdForUpdate(productId)
+                .orElseThrow(() -> new ApiException(404, "Not Found", "Product " + productId + " not found"));
+
+        // 不能购买自己发布的商品
+        if (buyerId.equals(product.getSellerId())) {
+            throw new ApiException(400, "BadRequest", "不能购买自己发布的商品");
+        }
+
         if (product.getPrice() == null) {
             throw badRequest("product price is missing");
         }
@@ -59,6 +79,7 @@ public class OrderService {
         order.setTotalPrice(product.getPrice().multiply(BigDecimal.valueOf(quantity)));
         order.setStatus(OrderStatus.PLACED);
         order.setCreatedAt(LocalDateTime.now());
+        order.setIpAddress(ip);
 
         int remaining = product.getQuantity() - quantity;
         product.setQuantity(remaining);
@@ -116,6 +137,16 @@ public class OrderService {
         }
 
         Order order = requireOrder(id);
+
+        // ===== 🔒 权限校验：只有买家或卖家可以操作自己的订单 =====
+        Long callerId = request.userId();
+        if (callerId == null) {
+            throw new ApiException(401, "Unauthorized", "userId is required");
+        }
+        if (!callerId.equals(order.getBuyerId()) && !callerId.equals(order.getSellerId())) {
+            throw new ApiException(403, "Forbidden", "you can only update your own order status");
+        }
+
         if (!order.getStatus().equals(OrderStatus.PLACED)) {
             throw new ApiException(409, "Conflict", "order status cannot be changed");
         }
@@ -127,6 +158,16 @@ public class OrderService {
             product.setQuantity(product.getQuantity() + order.getQuantity());
             product.setIsDeleted(0);
             productRepository.save(product);
+        }
+
+        if (status.equals(OrderStatus.COMPLETED)) {
+            // 更新商品统计
+            ProductStats stats = productStatsRepository.findById(order.getProductId())
+                    .orElseGet(() -> { ProductStats s = new ProductStats(); s.setProductId(order.getProductId()); return s; });
+            stats.setOrderCount(stats.getOrderCount() + order.getQuantity());
+            stats.setOrderAmount(stats.getOrderAmount().add(order.getTotalPrice()));
+            stats.setUpdatedAt(LocalDateTime.now());
+            productStatsRepository.save(stats);
         }
 
         return OrderVO.from(orderRepository.save(order));

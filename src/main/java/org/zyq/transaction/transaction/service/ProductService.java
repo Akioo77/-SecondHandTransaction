@@ -1,11 +1,16 @@
 package org.zyq.transaction.transaction.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.zyq.transaction.common.exception.ApiException;
 import org.zyq.transaction.transaction.dto.ProductControllerDto;
 import org.zyq.transaction.transaction.entity.Product;
+import org.zyq.transaction.transaction.entity.ProductStats;
+import org.zyq.transaction.transaction.entity.ProductView;
 import org.zyq.transaction.transaction.repository.CategoryRepository;
 import org.zyq.transaction.transaction.repository.ProductRepository;
+import org.zyq.transaction.transaction.repository.ProductStatsRepository;
+import org.zyq.transaction.transaction.repository.ProductViewRepository;
 import org.zyq.transaction.transaction.vo.ProductVO;
 
 import java.math.BigDecimal;
@@ -18,11 +23,17 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductStatsRepository productStatsRepository;
+    private final ProductViewRepository productViewRepository;
 
     public ProductService(ProductRepository productRepository,
-                          CategoryRepository categoryRepository) {
+                          CategoryRepository categoryRepository,
+                          ProductStatsRepository productStatsRepository,
+                          ProductViewRepository productViewRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.productStatsRepository = productStatsRepository;
+        this.productViewRepository = productViewRepository;
     }
 
     public ProductVO create(ProductControllerDto.CreateRequest request) {
@@ -44,7 +55,19 @@ public class ProductService {
         product.setIsDeleted(0);
         product.setCreatedAt(LocalDateTime.now());
 
-        return ProductVO.from(productRepository.save(product));
+        Product saved = productRepository.save(product);
+
+        // 初始化 stats 记录（确保浏览量、销量统计能正常工作）
+        ProductStats stats = new ProductStats();
+        stats.setProductId(saved.getId());
+        stats.setViewCount(0L);
+        stats.setFavoriteCount(0L);
+        stats.setOrderCount(0L);
+        stats.setOrderAmount(BigDecimal.ZERO);
+        stats.setUpdatedAt(LocalDateTime.now());
+        productStatsRepository.save(stats);
+
+        return ProductVO.from(saved);
     }
 
     public ProductVO update(Long id, ProductControllerDto.UpdateRequest request) {
@@ -103,6 +126,34 @@ public class ProductService {
 
     public ProductVO get(Long id) {
         return ProductVO.from(requireActiveProduct(id));
+    }
+
+    @Transactional
+    public void recordView(Long productId, Long userId, Integer durationSeconds) {
+        // 记录浏览明细（含停留时长）
+        ProductView view = new ProductView();
+        view.setProductId(productId);
+        view.setUserId(userId);
+        view.setViewedAt(LocalDateTime.now());
+        if (durationSeconds != null && durationSeconds > 0) {
+            view.setDurationSeconds(durationSeconds);
+        }
+        productViewRepository.save(view);
+
+        // 累计浏览量（使用增量 SQL，避免加载全表）
+        ProductStats stats = productStatsRepository.findById(productId)
+                .orElseGet(() -> { ProductStats s = new ProductStats(); s.setProductId(productId); return s; });
+        stats.setViewCount(stats.getViewCount() + 1);
+        stats.setUpdatedAt(LocalDateTime.now());
+
+        // 更新平均停留时长（使用聚合 SQL，只查同商品有时长记录的平均值）
+        if (durationSeconds != null && durationSeconds > 0) {
+            Double avg = productViewRepository.calcAvgDurationByProductId(productId);
+            if (avg != null) {
+                stats.setAvgViewDuration(avg);
+            }
+        }
+        productStatsRepository.save(stats);
     }
 
     public List<ProductVO> list(Long categoryId, Long sellerId, String keyword) {

@@ -12,6 +12,18 @@ public class FavoriteId {
         this.userId = userId;
         this.productId = productId;
     }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FavoriteId that = (FavoriteId) o;
+        return userId != null ? userId.equals(that.userId) : that.userId == null
+            && productId != null ? productId.equals(that.productId) : that.productId == null;
+    }
+    @Override
+    public int hashCode() {
+        return userId != null ? userId.hashCode() : 0;
+    }
     public Long getUserId() {
         return userId;
     }

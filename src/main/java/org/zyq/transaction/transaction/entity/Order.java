@@ -45,6 +45,9 @@ public class Order {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "ip_address", length = 64)
+    private String ipAddress;
+
     //setter and getter
     public Long getId() {return id; }
 
@@ -93,5 +96,8 @@ public class Order {
     public LocalDateTime getCreatedAt() {return createdAt; }
 
     public void setCreatedAt(LocalDateTime createdAt) {this.createdAt = createdAt; }
+
+    public String getIpAddress() { return ipAddress; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
 
 }

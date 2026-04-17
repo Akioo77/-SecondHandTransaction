@@ -118,7 +118,7 @@ public class UserApi {
         if (favorite){
             return ResponseEntity.ok("Item is in favorites");
         }else  {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.ok("Item is not in favorites");
         }
     }
 

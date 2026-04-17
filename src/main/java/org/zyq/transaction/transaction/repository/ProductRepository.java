@@ -1,10 +1,12 @@
 package org.zyq.transaction.transaction.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.zyq.transaction.transaction.entity.Product;
 
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,4 +28,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             where p.id = :id and (p.isDeleted = 0 or p.isDeleted is null)
             """)
     Optional<Product> findActiveById(@Param("id") Long id);
+
+    // 行级悲观锁：防止并发超卖（下单时锁定商品行）
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select p from Product p
+            where p.id = :id and (p.isDeleted = 0 or p.isDeleted is null)
+            """)
+    Optional<Product> findActiveByIdForUpdate(@Param("id") Long id);
 }

@@ -1,6 +1,7 @@
 package org.zyq.transaction.transaction.controller;
 
 import org.springframework.web.bind.annotation.*;
+import org.zyq.transaction.transaction.common.Result;
 import org.zyq.transaction.transaction.dto.ProductControllerDto;
 import org.zyq.transaction.transaction.service.ProductService;
 import org.zyq.transaction.transaction.vo.ProductVO;
@@ -18,21 +19,32 @@ public class ProductController {
     }
 
     @PostMapping
-    public ProductVO create(@RequestBody ProductControllerDto.CreateRequest request) {
-        return productService.create(request);
+    public Result<ProductVO> create(@RequestBody ProductControllerDto.CreateRequest request) {
+        return Result.success(productService.create(request));
     }
 
     @GetMapping("/{id}")
-    public ProductVO get(@PathVariable Long id) {
-        return productService.get(id);
+    public Result<ProductVO> get(@PathVariable Long id,
+                         @RequestParam(required = false) Long viewerId) {
+        if (viewerId != null && viewerId > 0) {
+            productService.recordView(id, viewerId, null);
+        }
+        return Result.success(productService.get(id));
+    }
+
+    @PostMapping("/{id}/view")
+    public void recordView(@PathVariable Long id,
+                           @RequestParam(required = false) Long userId,
+                           @RequestParam(required = false) Integer duration) {
+        productService.recordView(id, userId, duration);
     }
 
     @GetMapping
-    public List<ProductVO> list(
+    public Result<List<ProductVO>> list(
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long sellerId,
             @RequestParam(required = false) String keyword) {
-        return productService.list(categoryId, sellerId, keyword);
+        return Result.success(productService.list(categoryId, sellerId, keyword));
     }
 
     @PutMapping("/{id}")

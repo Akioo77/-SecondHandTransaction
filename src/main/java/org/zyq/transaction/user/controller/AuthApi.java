@@ -1,5 +1,6 @@
 package org.zyq.transaction.user.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -30,8 +31,9 @@ public class AuthApi {
     }
 
     @PostMapping("/login")
-    public ResponseEntity login(@RequestBody ArgDTO.LoginArg arg, HttpServletResponse response) {
-        Long id = authService.login(arg.username(), arg.password());
+    public ResponseEntity login(@RequestBody ArgDTO.LoginArg arg, HttpServletRequest request, HttpServletResponse response) {
+        String ip = org.zyq.transaction.user.entity.User.getClientIp(request);
+        Long id = authService.login(arg.username(), arg.password(), ip);
         if (id != null){
             ResponseCookie cookie = ResponseCookie.from("ID", id.toString())
                     .httpOnly(false)
