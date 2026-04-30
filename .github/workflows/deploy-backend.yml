@@ -1,0 +1,38 @@
+name: Deploy Backend to Render
+
+on:
+  push:
+    branches:
+      - backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Build JAR
+        run: |
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests -q
+
+      - name: Deploy to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -s -X POST https://api.render.com/v1/blueprints \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "serviceType": "web",
+              "name": "secondhand-backend",
+              "env": "node",
+              "region": "oregon",
+              "repository": "https://github.com/Akioo77/-SecondHandTransaction"
+            }'

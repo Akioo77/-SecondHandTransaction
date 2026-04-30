@@ -1,0 +1,72 @@
+name: Deploy SecondHand Backend to Render
+
+on:
+  push:
+    branches: [ backend ]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Build Spring Boot JAR
+        run: |
+          chmod +x mvnw
+          ./mvnw clean package -DskipTests -q
+          ls -lh target/*.jar
+
+      - name: Deploy to Render via API
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          echo "Finding or creating Render service..."
+          SERVICE_ID=$(curl -s "https://api.render.com/v1/services?limit=20" \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" | \
+            python3 -c "import sys,json; services=json.load(sys.stdin); 
+            for s in services: 
+              if s.get('name','')=='secondhand-backend': print(s['id']); break")
+          
+          if [ -z "$SERVICE_ID" ]; then
+            echo "Creating new service..."
+            RESULT=$(curl -s -X POST "https://api.render.com/v1/services" \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "name": "secondhand-backend",
+                "type": "web_service",
+                "region": "oregon",
+                "runtime": "docker",
+                "dockerfilePath": "./Dockerfile",
+                "repository": "https://github.com/Akioo77/-SecondHandTransaction",
+                "branch": "backend",
+                "environment": "node"
+              }')
+            echo "Create result: $RESULT"
+          else
+            echo "Service exists: $SERVICE_ID - triggering deploy..."
+            curl -s -X POST "https://api.render.com/v1/services/$SERVICE_ID/deploys" \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d '{"triggerBranch": "backend"}'
+          fi
+
+      - name: Wait and verify deployment
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          sleep 30
+          curl -s "https://api.render.com/v1/services" \
+            -H "Authorization: Bearer $RENDER_API_KEY" | \
+            python3 -c "import sys,json; services=json.load(sys.stdin); 
+            for s in services: 
+              if s.get('name','')=='secondhand-backend': 
+                print('Status:', s.get('status',''), 'URL:', s.get('serviceDetails',{}).get('url',''))"
