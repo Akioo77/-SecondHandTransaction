@@ -1,0 +1,4 @@
+[build]
+builder = "nixpacks"
+buildCommand = "./mvnw clean package -DskipTests"
+startCommand = "java -jar target/SecondHandTransaction-0.0.1-SNAPSHOT.jar"
