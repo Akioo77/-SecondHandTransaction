@@ -20,6 +20,7 @@ import {
   MapPin,
   Phone,
   UserIcon,
+  Truck,
 } from "lucide-react"
 
 interface Order {
@@ -51,6 +52,7 @@ interface SalesSummary {
 
 const ORDER_STATUS = {
   PLACED: 10,
+  SHIPPED: 20,
   COMPLETED: 40,
   CANCELED: 50,
 }
@@ -151,6 +153,13 @@ export default function OrdersPage() {
 
   const getStatusBadge = (status: number) => {
     switch (status) {
+      case ORDER_STATUS.SHIPPED:
+        return (
+          <Badge variant="secondary" className="gap-1 bg-blue-100 text-blue-700 hover:bg-blue-100">
+            <Truck className="h-3 w-3" />
+            已发货
+          </Badge>
+        )
       case ORDER_STATUS.PLACED:
         return (
           <Badge variant="secondary" className="gap-1">
@@ -180,6 +189,7 @@ export default function OrdersPage() {
   const filterOrdersByStatus = (orders: Order[], tab: string) => {
     if (tab === "all") return orders
     if (tab === "placed") return orders.filter((order) => order.status === ORDER_STATUS.PLACED)
+    if (tab === "shipped") return orders.filter((order) => order.status === ORDER_STATUS.SHIPPED)
     if (tab === "completed") return orders.filter((order) => order.status === ORDER_STATUS.COMPLETED)
     if (tab === "cancelled") return orders.filter((order) => order.status === ORDER_STATUS.CANCELED)
     return orders
@@ -248,16 +258,21 @@ export default function OrdersPage() {
           <div className="flex gap-2">
             {order.status === ORDER_STATUS.PLACED && role === "buyer" && (
               <>
-                <Button size="sm" onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.COMPLETED)}>
-                  确认收货
-                </Button>
                 <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.CANCELED)}>
                   取消订单
                 </Button>
               </>
             )}
             {order.status === ORDER_STATUS.PLACED && role === "seller" && (
-              <span className="text-sm text-muted-foreground">等待买家确认</span>
+              <span className="text-sm text-muted-foreground">等待买家付款</span>
+            )}
+            {order.status === ORDER_STATUS.SHIPPED && role === "buyer" && (
+              <Button size="sm" onClick={() => handleUpdateStatus(order.id, ORDER_STATUS.COMPLETED)}>
+                确认收货
+              </Button>
+            )}
+            {order.status === ORDER_STATUS.SHIPPED && role === "seller" && (
+              <span className="text-sm text-muted-foreground">等待买家确认收货</span>
             )}
           </div>
         </div>
@@ -324,6 +339,7 @@ export default function OrdersPage() {
         <TabsList className="mb-6">
           <TabsTrigger value="all">全部</TabsTrigger>
           <TabsTrigger value="placed">待完成</TabsTrigger>
+          <TabsTrigger value="shipped">已发货</TabsTrigger>
           <TabsTrigger value="completed">已完成</TabsTrigger>
           <TabsTrigger value="cancelled">已取消</TabsTrigger>
         </TabsList>

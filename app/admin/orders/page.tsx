@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 
 const STATUS_MAP: Record<number, { label: string; className: string }> = {
   10: { label: "已下单", className: "bg-blue-100 text-blue-700 hover:bg-blue-100" },
+  20: { label: "已发货", className: "bg-blue-100 text-blue-700 hover:bg-blue-100" },
   40: { label: "已完成", className: "bg-green-100 text-green-700 hover:bg-green-100" },
   50: { label: "已取消", className: "bg-slate-100 text-slate-600 hover:bg-slate-100" },
 }
