@@ -60,6 +60,18 @@ public class AdminController {
         return Result.success(adminService.getAllOrders());
     }
 
+    @PostMapping("/orders/{id}/cancel")
+    public Result<Void> cancelOrder(@PathVariable Long id, HttpServletRequest request) {
+        adminService.cancelOrder(id);
+        operationLogService.log(OP_ADMIN, ROLE_ADMIN,
+                "ORDER_CANCEL",
+                String.format("关闭订单 #%d（管理员操作）", id),
+                "ORDER", id,
+                "status=10", "status=50",
+                getClientIp(request));
+        return Result.success(null);
+    }
+
     @GetMapping("/sales-trend")
     public Result<Map<String, Object>> getSalesTrend() {
         return Result.success(adminService.getSalesTrend());

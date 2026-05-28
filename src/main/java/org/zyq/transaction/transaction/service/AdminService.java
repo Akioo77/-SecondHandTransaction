@@ -3,7 +3,7 @@ package org.zyq.transaction.transaction.service;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.zyq.transaction.common.exception.ApiException;
 import org.springframework.transaction.annotation.Transactional;
 import org.zyq.transaction.transaction.entity.Category;
 import org.zyq.transaction.transaction.vo.UserProfileVO;
@@ -420,6 +420,24 @@ public class AdminService {
 
     private Product findProductById(List<Product> products, Long id) {
         return products.stream().filter(p -> id.equals(p.getId())).findFirst().orElse(null);
+    }
+
+    @Transactional
+    public void cancelOrder(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ApiException(404, "Not Found", "Order not found"));
+        if (order.getStatus() != 10) {
+            throw new ApiException(409, "Conflict", "Only placed orders can be cancelled");
+        }
+        order.setStatus(50);
+        orderRepository.save(order);
+        // 归还库存
+        Product product = productRepository.findById(order.getProductId()).orElse(null);
+        if (product != null) {
+            product.setQuantity(product.getQuantity() + order.getQuantity());
+            product.setIsDeleted(0);
+            productRepository.save(product);
+        }
     }
 
 }
