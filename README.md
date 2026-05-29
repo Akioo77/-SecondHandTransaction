@@ -145,15 +145,6 @@ npm run dev
 
 > 服务地址：http://localhost:3000
 
-### 测试账号
-
-| 角色 | 用户名 | 密码 |
-|------|--------|------|
-| 普通用户 | akioo77 | test123 |
-| 普通用户 | akioo7 | test123 |
-| 管理员 | admin | admin |
-
----
 
 ## 📡 API 概览
 
