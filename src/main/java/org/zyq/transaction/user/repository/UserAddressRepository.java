@@ -11,26 +11,20 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, Long> 
     List<UserAddress> findByUserId(Long userId);
 
     @Query("""
-            select new map(
-                ua.province as province,
-                count(ua.userId) as userCount
-            )
+            select ua.province as province, count(ua.userId) as userCount
             from UserAddress ua
             where ua.province is not null and ua.province != ''
             group by ua.province
             order by userCount desc
             """)
-    List<Object> countByProvince();
+    List<Object[]> countByProvince();
 
     @Query("""
-            select new map(
-                ua.city as city,
-                count(ua.userId) as userCount
-            )
+            select ua.city as city, count(ua.userId) as userCount
             from UserAddress ua
             where ua.province = :province and ua.city is not null and ua.city != ''
             group by ua.city
             order by userCount desc
             """)
-    List<Object> countByCity(@Param("province") String province);
+    List<Object[]> countByCity(@Param("province") String province);
 }

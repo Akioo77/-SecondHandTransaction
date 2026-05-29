@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import org.zyq.transaction.common.exception.ApiException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.zyq.transaction.transaction.entity.Category;
 import org.zyq.transaction.transaction.vo.UserProfileVO;
@@ -48,7 +49,7 @@ public class AdminService {
     // ---- 仪表盘统计 ----
     public Map<String, Object> getStats() {
         Map<String, Object> m = new HashMap<>();
-        m.put("totalUsers", querySingle("select count(u) from User u where u.deleted = false", Long.class));
+        m.put("totalUsers", querySingle("select count(u) from User u where u.deleted = 0", Long.class));
         m.put("totalProducts", querySingle("select count(p) from Product p where p.isDeleted = 0 or p.isDeleted is null", Long.class));
         m.put("totalOrders", querySingle("select count(o) from Order o", Long.class));
         try {
@@ -81,7 +82,8 @@ public class AdminService {
             m.put("id", ((Number) r[0]).intValue());
             m.put("username", r[1]);
             m.put("createdAt", r[2]);
-            m.put("enabled", r[3] != null && !((Boolean) r[3]));
+            Boolean deleted = r[3] == null ? null : (r[3] instanceof Boolean ? (Boolean) r[3] : ((Number) r[3]).intValue() != 0);
+            m.put("enabled", deleted != null && !deleted);
             m.put("lastLoginIp", r[4] != null ? r[4] : "—");
             m.put("lastLoginProvince", r[5] != null && !((String) r[5]).isEmpty() ? r[5] : null);
             m.put("lastLoginCity", r[6] != null && !((String) r[6]).isEmpty() ? r[6] : null);
@@ -100,7 +102,7 @@ public class AdminService {
     public void updateUserStatus(Integer id, Boolean enabled) {
         User u = userRepository.findById(Long.valueOf(id))
                 .orElseThrow(() -> new RuntimeException("用户不存在: " + id));
-        u.setDeleted(!enabled);
+        u.setDeleted(enabled ? 0 : 1);
         userRepository.save(u);
     }
 
@@ -151,6 +153,12 @@ public class AdminService {
             p.setQuantity(Integer.parseInt(updates.get("quantity").toString()));
         if (updates.containsKey("categoryId"))
             p.setCategoryId(Long.parseLong(updates.get("categoryId").toString()));
+        if (updates.containsKey("images"))
+            p.setImages(updates.get("images").toString());
+        if (updates.containsKey("title"))
+            p.setTitle(updates.get("title").toString());
+        if (updates.containsKey("price"))
+            p.setPrice(new BigDecimal(updates.get("price").toString()));
         productRepository.save(p);
     }
 

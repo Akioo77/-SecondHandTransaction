@@ -9,11 +9,14 @@ import java.util.List;
 
 public interface ProductStatsRepository extends JpaRepository<ProductStats, Long> {
 
-    // 销量排行（按 order_count 降序）
-    @Query("""
-            select ps from ProductStats ps
-            order by ps.orderCount desc
-            """)
+    // 销量排行（按 order_count 降序，有真实销售的商品优先）
+    @Query(value="""
+            select ps.* from product_stats ps
+            join products p on p.id = ps.product_id
+            where (p.is_deleted = 0 or p.is_deleted is null)
+            order by ps.order_count desc, ps.view_count desc
+            LIMIT :limit
+            """, nativeQuery=true)
     List<ProductStats> findTopByOrderCount(@Param("limit") int limit);
 
     // 销售额排行

@@ -89,9 +89,6 @@ public class ProductService {
         if (request.quantity() != null) {
             int quantity = requireQuantity(request.quantity(), true);
             product.setQuantity(quantity);
-            if (quantity == 0) {
-                product.setIsDeleted(1);
-            }
         }
 
         if (request.images() != null) {
@@ -211,18 +208,24 @@ public class ProductService {
             return null;
         }
         String trimmed = images.trim();
-        String base64 = trimmed;
+        // Server path (e.g. /uploads/xxx.png) or external URL — store as-is
+        if (trimmed.startsWith("/") || trimmed.startsWith("http")) {
+            return trimmed;
+        }
+        // Base64 data URI
         if (trimmed.startsWith("data:")) {
             int commaIndex = trimmed.indexOf(',');
             if (commaIndex <= 0 || commaIndex == trimmed.length() - 1) {
                 throw badRequest("images data URI is invalid");
             }
-            base64 = trimmed.substring(commaIndex + 1);
+            String base64 = trimmed.substring(commaIndex + 1);
+            if (!isBase64(base64)) {
+                throw badRequest("images must be base64");
+            }
+            return trimmed;
         }
-        if (!isBase64(base64)) {
-            throw badRequest("images must be base64");
-        }
-        return trimmed;
+        // Plain non-base64 string (should not reach here)
+        throw badRequest("images must be base64 or a URL path");
     }
 
     private boolean isBase64(String value) {

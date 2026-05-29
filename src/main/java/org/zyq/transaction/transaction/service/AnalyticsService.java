@@ -45,12 +45,11 @@ public class AnalyticsService {
     // ==================== 用户画像 ====================
     public UserPortraitVO getUserPortrait() {
         // 地域分布
-        List<Object> regionRaw = userAddressRepository.countByProvince();
+        List<Object[]> regionRaw = userAddressRepository.countByProvince();
         Map<String, Long> regionDist = new LinkedHashMap<>();
-        for (Object obj : regionRaw) {
-            Object[] row = (Object[]) obj;
+        for (Object[] row : regionRaw) {
             String province = String.valueOf(row[0]);
-            Long count = (Long) row[1];
+            Long count = ((Number) row[1]).longValue();
             regionDist.put(province, count);
         }
 
@@ -491,12 +490,14 @@ public class AnalyticsService {
     // ==================== 热销推荐（首页用）====================
     public List<RecommendedProductVO> getPopularRecommendations(int limit) {
         return productStatsRepository.findAll().stream()
+                .filter(ps -> ps.getOrderCount() > 0)  // 只推荐有真实销量的商品
                 .sorted(Comparator.comparing(ProductStats::getOrderCount).reversed()
                         .thenComparing(ProductStats::getViewCount).reversed())
                 .limit(limit)
                 .map(ps -> {
                     Product p = productRepository.findActiveById(ps.getProductId()).orElse(null);
                     if (p == null) return null;
+                    if (p.getQuantity() == 0) return null;  // 排除库存为0的商品
                     return new RecommendedProductVO(
                             p.getId(), p.getTitle(), p.getPrice(),
                             ps.getOrderCount(), ps.getViewCount(),
@@ -575,18 +576,21 @@ public class AnalyticsService {
             }
         }
 
-        // STEP 2：补充全局热销（排除已推荐和已购买）
-        List<ProductStats> popular = productStatsRepository.findAll().stream()
-                .sorted(Comparator.comparing(ProductStats::getOrderCount).reversed()
-                        .thenComparing(ProductStats::getViewCount).reversed())
-                .limit(limit)
-                .toList();
+        // STEP 2：补充全局热销（排除已推荐、已购买、自己的商品、库存为0的商品）
+        // 无历史记录用户最多只推荐4个有真实销量的商品
+        int fallbackLimit = categoryViewSeconds.isEmpty() ? Math.min(4, limit) : limit;
+        List<ProductStats> popular = productStatsRepository.findTopByOrderCount(fallbackLimit);
 
         for (ProductStats ps : popular) {
             if (boughtProductIds.contains(ps.getProductId())) continue;
             Product p = productRepository.findActiveById(ps.getProductId()).orElse(null);
             if (p == null) continue;
-            // 如果用户有品类偏好但这个商品不在偏好品类里，降权为"热门推荐"标签
+            // 排除自己发布的商品
+            if (userId != null && userId.equals(p.getSellerId())) continue;
+            // 排除库存为0的商品
+            if (p.getQuantity() != null && p.getQuantity() == 0) continue;
+            // 无历史记录用户只看有真实销量的商品
+            if (categoryViewSeconds.isEmpty() && ps.getOrderCount() == 0) continue;
             String reason = (userId != null && !categoryViewSeconds.isEmpty()
                     && categoryViewSeconds.containsKey(p.getCategoryId())) ? "为你推荐" : "热门商品";
             result.add(new RecommendedProductVO(

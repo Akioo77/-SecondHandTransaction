@@ -83,10 +83,6 @@ public class OrderService {
 
         int remaining = product.getQuantity() - quantity;
         product.setQuantity(remaining);
-        if (remaining <= 0) {
-            product.setIsDeleted(1);
-        }
-
         productRepository.save(product);
         return OrderVO.from(orderRepository.save(order));
     }
