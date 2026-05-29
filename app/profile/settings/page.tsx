@@ -12,11 +12,20 @@ import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/hooks/use-auth"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { authApi } from "@/lib/api"
 
 export default function SettingsPage() {
   const router = useRouter()
   const { user, loading: authLoading, logout } = useAuth()
-  const [nickname, setNickname] = useState("")
+
+  const [oldPassword, setOldPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [pwSaving, setPwSaving] = useState(false)
+
+  const [deleting, setDeleting] = useState(false)
+  const [delMsg, setDelMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -24,15 +33,55 @@ export default function SettingsPage() {
     }
   }, [user, authLoading, router])
 
-  useEffect(() => {
-    if (user) {
-      setNickname(user.nickname)
-    }
-  }, [user])
-
-  const handleUpdateProfile = async (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    alert("个人信息更新功能待实现")
+    setPwMsg(null)
+    if (newPassword.length < 4) {
+      setPwMsg({ type: "error", text: "新密码至少4位" })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPwMsg({ type: "error", text: "两次输入的新密码不一致" })
+      return
+    }
+    setPwSaving(true)
+    try {
+      const res = await authApi.changePassword(oldPassword, newPassword)
+      if (!res.error) {
+        setPwMsg({ type: "success", text: "密码修改成功！" })
+        setOldPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+      } else {
+        setPwMsg({ type: "error", text: res.error || "旧密码错误，修改失败" })
+      }
+    } catch {
+      setPwMsg({ type: "error", text: "网络错误，请重试" })
+    } finally {
+      setPwSaving(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!confirm("确定要删除账号吗？此操作不可逆！")) return
+    setDeleting(true)
+    setDelMsg(null)
+    try {
+      const res = await authApi.deleteAccount()
+      if (!res.error) {
+        setDelMsg({ type: "success", text: "账号已删除，正在跳转..." })
+        setTimeout(() => {
+          logout()
+          router.push("/")
+        }, 1500)
+      } else {
+        setDelMsg({ type: "error", text: res.error || "删除失败，请重试" })
+      }
+    } catch {
+      setDelMsg({ type: "error", text: "网络错误，请重试" })
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const handleLogout = async () => {
@@ -56,30 +105,15 @@ export default function SettingsPage() {
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>个人信息</CardTitle>
-            <CardDescription>更新您的账号信息</CardDescription>
+            <CardTitle>账号信息</CardTitle>
+            <CardDescription>您的账号基本信息</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleUpdateProfile} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">用户名</Label>
-                <Input id="username" type="text" value={user.username} disabled />
-                <p className="text-xs text-muted-foreground">用户名不可修改</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="nickname">昵称</Label>
-                <Input
-                  id="nickname"
-                  type="text"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="请输入昵称"
-                />
-              </div>
-
-              <Button type="submit">保存更改</Button>
-            </form>
+            <div className="space-y-2">
+              <Label>用户名</Label>
+              <Input value={user.username} disabled />
+              <p className="text-xs text-muted-foreground">用户名不可修改</p>
+            </div>
           </CardContent>
         </Card>
 
@@ -89,23 +123,49 @@ export default function SettingsPage() {
             <CardDescription>定期更新密码以保护账号安全</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4">
+            <form onSubmit={handleChangePassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="current-password">当前密码</Label>
-                <Input id="current-password" type="password" />
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={oldPassword}
+                  onChange={e => setOldPassword(e.target.value)}
+                  placeholder="请输入当前密码"
+                />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="new-password">新密码</Label>
-                <Input id="new-password" type="password" />
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="请输入新密码（至少4位）"
+                />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirm-password">确认新密码</Label>
-                <Input id="confirm-password" type="password" />
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="请再次输入新密码"
+                />
               </div>
 
-              <Button type="submit">更新密码</Button>
+              {pwMsg && (
+                <p className={`text-sm ${pwMsg.type === "success" ? "text-green-600" : "text-red-500"}`}>
+                  {pwMsg.text}
+                </p>
+              )}
+
+              <Button type="submit" disabled={pwSaving}>
+                {pwSaving ? "验证中..." : "更新密码"}
+              </Button>
             </form>
           </CardContent>
         </Card>
@@ -133,10 +193,15 @@ export default function SettingsPage() {
                 <h4 className="font-medium">删除账号</h4>
                 <p className="text-sm text-muted-foreground">永久删除账号和所有数据</p>
               </div>
-              <Button variant="destructive" onClick={() => alert("删除账号功能待实现")}>
-                删除账号
+              <Button variant="destructive" onClick={handleDeleteAccount} disabled={deleting}>
+                {deleting ? "删除中..." : "删除账号"}
               </Button>
             </div>
+            {delMsg && (
+              <p className={`text-sm ${delMsg.type === "success" ? "text-green-600" : "text-red-500"}`}>
+                {delMsg.text}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -34,7 +34,7 @@ export default function OrdersPage() {
     if (!confirm("确定要关闭此订单吗？关闭后订单标记为已取消。")) return
     setActionLoading(orderId)
     try {
-      await orderApi.updateStatus(orderId, 50)
+      await adminApi.cancelOrder(orderId)
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 50 } : o))
     } catch {
       alert("操作失败，请重试")

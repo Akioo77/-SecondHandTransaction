@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://api.secondhand.e3nq.com:81"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://124.220.49.156"
 
 interface ApiResponse<T> {
   data?: T
@@ -66,6 +66,17 @@ export const authApi = {
     fetchApi(`/api/users/updatePassword?id=${id}`, {
       method: "POST",
       body: JSON.stringify({ newPassword }),
+    }),
+
+  changePassword: (oldPassword: string, newPassword: string) =>
+    fetchApi("/api/users/changePassword", {
+      method: "PUT",
+      body: JSON.stringify({ oldPassword, newPassword }),
+    }),
+
+  deleteAccount: () =>
+    fetchApi("/api/users/deleteAccount", {
+      method: "DELETE",
     }),
 }
 
@@ -211,25 +222,25 @@ export const favoriteApi = {
   add: (userId: number, itemId: number) =>
     fetchApi("/api/users/favorites/add", {
       method: "POST",
-      body: JSON.stringify({ id: userId, itemId }),
+      body: JSON.stringify({ userId, productId }),
     }),
 
   remove: (userId: number, itemId: number) =>
     fetchApi("/api/users/favorites/remove", {
       method: "POST",
-      body: JSON.stringify({ id: userId, itemId }),
+      body: JSON.stringify({ userId, productId }),
     }),
 
   isFavorite: (userId: number, itemId: number) =>
     fetchApi<boolean>("/api/users/favorites/isFavorite", {
       method: "POST",
-      body: JSON.stringify({ id: userId, itemId }),
+      body: JSON.stringify({ userId, productId }),
     }),
 
   getList: (userId: number) =>
     fetchApi("/api/users/favorites/", {
       method: "POST",
-      body: JSON.stringify({ id: userId }),
+      body: JSON.stringify({ userId }),
     }),
 }
 
@@ -349,6 +360,15 @@ export const adminApi = {
   updateUserStatus: (id: number, enabled: boolean) =>
     fetchApi(`/api/admin/users/${id}/status?enabled=${enabled}`, { method: "PUT" }),
 
+  updateUserPassword: (id: number, password: string) =>
+    fetchApi(`/api/admin/users/${id}/password`, {
+      method: "PUT",
+      body: JSON.stringify({ password }),
+    }),
+
+  deleteUser: (id: number) =>
+    fetchApi(`/api/admin/users/${id}`, { method: "DELETE" }),
+
   getProducts: () => fetchApi<any[]>("/api/admin/products", { method: "GET" }),
 
   updateProduct: (id: number, updates: { price?: number; quantity?: number; categoryId?: number }) =>
@@ -370,6 +390,8 @@ export const adminApi = {
 
   getOrders: () => fetchApi<any[]>("/api/admin/orders", { method: "GET" }),
 
+  cancelOrder: (id: number) =>
+    fetchApi(`/api/admin/orders/${id}/cancel`, { method: "POST" }),
   getSalesTrend: () => fetchApi<{ daily: any[] }>("/api/admin/sales-trend", { method: "GET" }),
 
   getOperationLogs: (action?: string, targetType?: string) => {

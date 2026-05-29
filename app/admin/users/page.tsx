@@ -18,6 +18,8 @@ export default function UsersPage() {
   const [pwDialog, setPwDialog] = useState<{ id: number; username: string } | null>(null)
   const [pwInput, setPwInput] = useState("")
   const [pwSaving, setPwSaving] = useState(false)
+  const [delDialog, setDelDialog] = useState<{ id: number; username: string } | null>(null)
+  const [delSaving, setDelSaving] = useState(false)
 
   const load = () => adminApi.getUsers().then(r => { if (r.data) setUsers(r.data) }).finally(() => setLoading(false))
 
@@ -32,24 +34,35 @@ export default function UsersPage() {
     if (!pwDialog || pwInput.length < 4) return
     setPwSaving(true)
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"
-      const res = await fetch(`${apiBase}/api/admin/users/${pwDialog.id}/password`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ password: pwInput }),
-      })
-      const data = await res.json()
-      if (data.code === 0) {
+      const result = await adminApi.updateUserPassword(pwDialog.id, pwInput)
+      if (!result.error) {
         setPwDialog(null)
         setPwInput("")
       } else {
-        alert(data.message || "修改失败")
+        alert(result.message || result.error || "修改失败")
       }
     } catch {
       alert("网络错误，请重试")
     } finally {
       setPwSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!delDialog) return
+    setDelSaving(true)
+    try {
+      const result = await adminApi.deleteUser(delDialog.id)
+      if (!result.error) {
+        setDelDialog(null)
+        load()
+      } else {
+        alert(result.message || result.error || "删除失败")
+      }
+    } catch {
+      alert("网络错误，请重试")
+    } finally {
+      setDelSaving(false)
     }
   }
 
@@ -107,6 +120,14 @@ export default function UsersPage() {
                       >
                         修改密码
                       </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setDelDialog({ id: u.id, username: u.username })}
+                      >
+                        删除
+                      </Button>
                       <span className="text-xs text-slate-400">{u.enabled ? "禁用" : "启用"}</span>
                       <Switch
                         checked={u.enabled}
@@ -151,6 +172,24 @@ export default function UsersPage() {
             <Button variant="outline" onClick={() => setPwDialog(null)}>取消</Button>
             <Button onClick={changePassword} disabled={pwInput.length < 4 || pwSaving}>
               {pwSaving ? "保存中..." : "确认修改"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除用户弹窗 */}
+      <Dialog open={!!delDialog} onOpenChange={open => !open && setDelDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>删除用户</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-slate-600">确定要删除用户 <span className="font-medium">{delDialog?.username}</span> 吗？此操作不可逆，该用户的账号将被永久禁用。</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDelDialog(null)}>取消</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={delSaving}>
+              {delSaving ? "删除中..." : "确认删除"}
             </Button>
           </DialogFooter>
         </DialogContent>

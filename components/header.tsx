@@ -121,6 +121,9 @@ export function Header() {
                   <DropdownMenuItem asChild>
                     <Link href="/analytics">数据分析</Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile/settings">修改密码</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>退出登录</DropdownMenuItem>
                 </DropdownMenuContent>

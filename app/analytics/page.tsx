@@ -25,24 +25,13 @@ export default function AnalyticsDashboard() {
   const [totalOrders, setTotalOrders] = useState(0)
   const [totalRevenue, setTotalRevenue] = useState(0)
 
+  // 首次加载数据（手动刷新）
   useEffect(() => {
     if (!authLoading && !user) router.push("/login")
   }, [user, authLoading, router])
 
-  // 页面可见性变化时刷新（用户从其他页回来时更新数据）
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") loadData()
-    }
-    document.addEventListener("visibilitychange", handleVisibility)
-    return () => document.removeEventListener("visibilitychange", handleVisibility)
-  }, [user])
-
-  // 每10秒自动刷新
-  useEffect(() => {
-    if (!user) return
-    const interval = setInterval(loadData, 10000)
-    return () => clearInterval(interval)
+    if (user) loadData()
   }, [user])
 
   const loadData = () => {

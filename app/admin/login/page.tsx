@@ -21,10 +21,8 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     if (username === "admin" && password === "admin") {
-      // 设置 Admin 登录 cookie（HttpOnly 更安全，但此处简化处理）
       document.cookie = `admin_session=admin-${Date.now()}; path=/; max-age=${7 * 24 * 60 * 60}`
-      router.push("/admin")
-      router.refresh()
+      window.location.href = "/admin"
     } else {
       setError("用户名或密码错误")
       setLoading(false)
