@@ -588,7 +588,7 @@ public class AnalyticsService {
             // 排除自己发布的商品
             if (userId != null && userId.equals(p.getSellerId())) continue;
             // 排除库存为0的商品
-            if (p.getQuantity() != null && p.getQuantity() == 0) continue;
+            if (p.getQuantity() == 0) continue;
             // 无历史记录用户只看有真实销量的商品
             if (categoryViewSeconds.isEmpty() && ps.getOrderCount() == 0) continue;
             String reason = (userId != null && !categoryViewSeconds.isEmpty()

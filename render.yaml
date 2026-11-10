@@ -9,10 +9,16 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
+      # 以下凭据不在仓库内保存明文：sync: false 表示由平台后台手动填写
       - key: DB_URL
         value: jdbc:postgresql://ep-lingering-unit-amw4168n-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require
+        sync: false
       - key: DB_USERNAME
         value: neondb_owner
+        sync: false
       - key: DB_PASSWORD
-        value: npg_VsFa7Yhy6WZp
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
         sync: false

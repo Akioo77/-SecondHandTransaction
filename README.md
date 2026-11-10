@@ -124,6 +124,19 @@ second-hand-transaction/
 
 ### 后端
 
+**先配置凭据**（仓库内不保存任何明文密码，模板见 [.env.example](.env.example)）：
+
+```bash
+export DB_URL=jdbc:postgresql://127.0.0.1:5432/secondhand
+export DB_USERNAME=secondhand
+export DB_PASSWORD=your-password-here
+export ADMIN_USERNAME=your-admin-name
+export ADMIN_PASSWORD=your-admin-password
+```
+
+> `DB_PASSWORD` 未提供时应用会**直接启动失败**，这是有意为之——避免静默回退到弱默认口令。
+> `ADMIN_USERNAME` / `ADMIN_PASSWORD` 未提供时，管理后台登录接口一律返回 503。
+
 ```bash
 cd SecondHandProject
 export JAVA_HOME=/usr/local/Cellar/openjdk@21/21.0.10
@@ -216,13 +229,16 @@ npm run dev
 
 ## 🔒 安全特性
 
+- **管理后台鉴权**：登录成功后由服务端签发 32 字节随机 token（`AdminSessionRegistry`），`admin_session` cookie 必须与服务端登记值**严格相等**且未过期（2 小时）才放行；拦截器在 `WebConfig` 中显式注册到 `/api/admin/**`
+- **管理员凭据外置**：`ADMIN_USERNAME` / `ADMIN_PASSWORD` 走环境变量，未配置则登录接口禁用（503），源码内无默认口令
+- **CORS 白名单**：由 `allowedOriginPatterns("*")` 改为显式 `allowedOrigins` 列表（`CORS_ALLOWED_ORIGINS`），避免任意站点携带凭证跨域调用
+- **凭据不入库**：`DB_PASSWORD` 等一律从环境变量读取，`.env` / `*.db` 已加入 `.gitignore`
 - **订单状态权限校验**：买家/卖家才能操作自己的订单（403 Forbidden）
 - **商品库存悲观锁**：下单时 `SELECT FOR UPDATE` 防止并发超卖
 - **SQL 注入防护**：AdminService 全部使用参数化查询（JPQL `?1` 绑定）
 - **密码加密**：BCrypt 哈希存储
 - **IP 格式标准化**：支持 IPv6 环回与 `::ffff:` 映射格式
-- **CORS 配置**：WebConfig 统一配置前后端跨域
-- **前端路由保护**：middleware.ts 检查 Admin/分析页面的登录状态
+- **前端路由保护**：middleware.ts 检查 Admin/分析页面的登录状态（仅作为体验优化，真正的拦截在后端）
 
 ---
 

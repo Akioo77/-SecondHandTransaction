@@ -34,3 +34,11 @@ build/
 data/
 src/main/resources/SecondHandPlatform.sql
 src/main/resources/fix-sellerId.sql
+
+### Secrets ###
+.env
+.env.*
+!.env.example
+*.db
+*.mv.db
+*.trace.db

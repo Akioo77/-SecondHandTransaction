@@ -41,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public Long login(String username, String password, String ip) {
         User user = userRepo.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
-        if (user.getDeleted() == 1) {
+        if (user.isDeleted()) {
             throw new ApiException(HttpStatus.FORBIDDEN.value(), "账号已被禁用", null);
         }
         if (passwordEncoder.matches(password, user.getPassword())){

@@ -102,7 +102,7 @@ public class AdminService {
     public void updateUserStatus(Integer id, Boolean enabled) {
         User u = userRepository.findById(Long.valueOf(id))
                 .orElseThrow(() -> new RuntimeException("用户不存在: " + id));
-        u.setDeleted(enabled ? 0 : 1);
+        u.setDeleted(!enabled);
         userRepository.save(u);
     }
 
