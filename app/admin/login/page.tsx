@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, Eye, EyeOff } from "lucide-react"
+import { adminAuthApi } from "@/lib/api"
+
+// 与后端 AdminSessionRegistry 的会话有效期保持一致（2 小时）
+const SESSION_MAX_AGE = 2 * 60 * 60
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -20,11 +24,13 @@ export default function AdminLoginPage() {
     setError("")
     setLoading(true)
 
-    if (username === "admin" && password === "admin") {
-      document.cookie = `admin_session=admin-${Date.now()}; path=/; max-age=${7 * 24 * 60 * 60}`
+    // 账号密码交给后端校验；后端签发随机 token，这里只负责存 cookie
+    const { token, error: loginError } = await adminAuthApi.login(username, password)
+    if (token) {
+      document.cookie = `admin_session=${token}; path=/; max-age=${SESSION_MAX_AGE}; SameSite=Lax`
       window.location.href = "/admin"
     } else {
-      setError("用户名或密码错误")
+      setError(loginError || "用户名或密码错误")
       setLoading(false)
     }
   }

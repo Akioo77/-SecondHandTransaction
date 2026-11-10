@@ -419,3 +419,37 @@ type OperationLogEntry = {
   description: string; targetType: string; targetId: number;
   beforeState: string; afterState: string; ipAddress: string; createdAt: string;
 }
+
+// Admin 登录 / 登出
+// 管理员口令不再在前端硬编码，改为由后端校验并签发随机会话 token，
+// 前端只负责把 token 存进 admin_session cookie。
+export const adminAuthApi = {
+  login: async (username: string, password: string): Promise<{ token?: string; error?: string }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, password }),
+      })
+      const data = await response.json()
+      if (!response.ok || data.code !== 0) {
+        return { error: data.message || "登录失败" }
+      }
+      return { token: data.token as string }
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Network error" }
+    }
+  },
+
+  logout: async (): Promise<void> => {
+    try {
+      await fetch(`${API_BASE_URL}/api/admin/logout`, {
+        method: "POST",
+        credentials: "include",
+      })
+    } catch {
+      // 忽略登出失败，前端本地清 cookie 即可
+    }
+  },
+}
