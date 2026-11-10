@@ -2,6 +2,8 @@
 
 一个基于 Spring Boot + Next.js 的全栈二手商品交易平台，支持商品发布、浏览、交易、评价等完整功能。
 
+> 📌 **本仓库为项目文档与接口说明**（README / 架构与接口清单 / 测试用例表）。业务源码暂未公开，架构与接口定义以本文档为准。
+
 ## 📋 项目简介
 
 本项目是一个现代化的二手交易平台，提供用户注册登录、商品管理、订单处理、收藏功能等完整的电商交易流程。
@@ -27,7 +29,7 @@
 
 - **框架**: Spring Boot 4.0.1
 - **语言**: Java 21
-- **数据库**: MySQL / MariaDB
+- **数据库**: PostgreSQL 14+
 - **ORM**: Spring Data JPA
 - **安全**: Spring Security
 - **构建工具**: Maven
@@ -59,12 +61,12 @@ second-hand-transaction/
 │   │   │   │   │   ├── entity/        # 实体类
 │   │   │   │   │   ├── dto/           # 数据传输对象
 │   │   │   │   │   └── vo/            # 视图对象
-│   │   │   │   └── user/              # 用户模块
-│   │   │   └── resources/
-│   │   │       └── application.properties
-│   │   └── test/
+│   │   │   └── user/                  # 用户模块
+│   │   └── resources/
+│   │       └── application.properties
+│   └── test/
 │   ├── pom.xml
-│   └── SecondHandPlatform.sql         # 数据库脚本
+│   └── SecondHandPlatform.sql         # 数据库初始化脚本（PostgreSQL）
 │
 └── SecondHandTransaction-Frontend/     # 前端项目
     ├── app/                            # Next.js 页面
@@ -94,20 +96,21 @@ second-hand-transaction/
 
 - Java 21+
 - Node.js 18+
-- MySQL 8.0+ / MariaDB 10.5+
+- PostgreSQL 14+
 - Maven 3.8+
 
 ### 后端启动
 
 1. 导入数据库
 ```bash
-mysql -u root -p < SecondHandTransaction/SecondHandPlatform.sql
+createdb -U postgres second_hand_platform
+psql -U postgres -d second_hand_platform -f SecondHandTransaction/SecondHandPlatform.sql
 ```
 
 2. 配置数据库连接
 编辑 `SecondHandTransaction/src/main/resources/application.properties`
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/second_hand_platform
+spring.datasource.url=jdbc:postgresql://localhost:5432/second_hand_platform
 spring.datasource.username=your_username
 spring.datasource.password=your_password
 ```
@@ -122,14 +125,9 @@ mvn spring-boot:run
 
 ### 前端启动
 
-1. 安装依赖
 ```bash
 cd SecondHandTransaction-Frontend
 npm install
-```
-
-2. 启动开发服务器
-```bash
 npm run dev
 ```
 
@@ -163,7 +161,24 @@ npm run dev
 - `DELETE /api/favorites/{id}` - 取消收藏
 - `GET /api/favorites` - 获取收藏列表
 
-## 🔒 安全特性
+## 🗄️ 数据库设计
+
+- **表结构**：10+ 张表，按业务域拆分用户 / 商品 / 订单 / 收藏 / 评价 / 分类
+- **ORM 映射**：Spring Data JPA 实体与 Repository，业务查询走 Repository 层
+- **初始化脚本**：`SecondHandPlatform.sql`（PostgreSQL 方言，含建表与初始数据）
+- **驱动依赖**：`org.postgresql:postgresql`（见 `pom.xml`）
+
+## 📈 数据分析模块
+
+基于交易与订单数据实现 3 个分析模块：
+
+- **用户画像** —— 地域分布 / 购买力 / 品类偏好
+- **销售趋势** —— 按时间维度的成交额与订单量走势
+- **商品排行榜** —— 按销量 / 热度排序的商品榜单
+
+前端以 Recharts 渲染图表，管理后台侧栏入口：`/sales-summary`、`/profile`。
+
+## 🛡️ 安全特性
 
 - Spring Security 身份认证
 - BCrypt 密码加密
@@ -184,6 +199,20 @@ npm run dev
 - 响应式设计，支持移动端
 - 使用 React Hook Form 进行表单验证
 
+## 🧪 功能测试与多端适配
+
+按页面与接口两条线维护测试覆盖，重点关注多端显示与跳转链路：
+
+| 检查维度 | 覆盖内容 |
+|---|---|
+| 页面可达性 | 10 个前端页面 + 全部 API 端点的可达性检查 |
+| 跳转链路 | 登录 → 首页 → 商品详情 → 下单 → 订单列表 → 个人中心的闭环跳转 |
+| 表单校验 | 注册、登录、发布商品表单的前后端双端校验一致性 |
+| 多端显示 | 移动端 / 平板 / 桌面端的布局与表格错位检查 |
+| 状态流转 | 订单状态、收藏状态在刷新与多端之间的一致性 |
+
+> 用例表与缺陷记录在补齐后随仓库一并提供；本节定义的是测试覆盖的五个维度。
+
 ## 📦 构建部署
 
 ### 后端打包
@@ -200,14 +229,16 @@ npm run build
 npm start
 ```
 
+### 生产部署
+- **服务器**：腾讯云轻量应用服务器
+- **反向代理**：Nginx 统一入口，转发后端 `8080` 与前端静态资源
+- **服务保活**：systemd 托管后端 jar，`restart` 策略保证异常退出自动拉起
+- **可用性**：7×24 公网访问
+
 ## 📄 许可证
 
 本项目仅供学习交流使用。
 
-## 📮 联系方式
-
-如有问题或建议，欢迎提交 Issue 或 Pull Request。
-
 ---
 
-⭐ 如果这个项目对你有帮助，欢迎 Star！
+_庄英琪 · 华南理工大学 网络工程（2023–2027）_
